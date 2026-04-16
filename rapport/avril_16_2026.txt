@@ -1,0 +1,5 @@
+-création du projet flutter
+-création des codes pour le flutter
+-build pour android et ios
+
+
