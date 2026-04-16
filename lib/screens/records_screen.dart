@@ -1,5 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../../database/local_database.dart';
+import '../database/local_database.dart';
 
 class RecordsScreen extends StatefulWidget {
   const RecordsScreen({super.key});
@@ -18,21 +19,25 @@ class _RecordsScreenState extends State<RecordsScreen> {
   }
 
   Future<void> _loadTemoins() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final data = await LocalDatabase.getAllTemoins();
+    if (!mounted) return;
     setState(() {
       _temoins   = data;
       _isLoading = false;
     });
   }
 
-  Future<void> _deleteTemoin(int id) async {
+  Future<void> _deleteTemoin(Map<String, dynamic> temoin) async {
+    // Confirmation
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1D27),
         title: const Text('Supprimer', style: TextStyle(color: Colors.white)),
-        content: const Text('Supprimer ce témoin localement ?',
+        content: const Text(
+            'Supprimer ce témoin et son fichier audio localement ?',
             style: TextStyle(color: Color(0xFF8A8F9E))),
         actions: [
           TextButton(
@@ -48,10 +53,29 @@ class _RecordsScreenState extends State<RecordsScreen> {
         ],
       ),
     );
-    if (confirm == true) {
-      await LocalDatabase.deleteTemoin(id);
-      _loadTemoins();
+
+    // Annulé ou widget démonté → on ne fait rien
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    // 1. Supprimer le fichier audio local s'il existe
+    final audioPath = temoin['chemin_audio'] as String?;
+    if (audioPath != null) {
+      try {
+        final file = File(audioPath);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
     }
+
+    // 2. Supprimer la ligne SQLite
+    await LocalDatabase.deleteTemoin(temoin['id'] as int);
+
+    // 3. Retirer l'élément de la liste en mémoire — pas de rechargement,
+    //    pas de navigation, l'utilisateur reste sur l'onglet
+    if (!mounted) return;
+    setState(() {
+      _temoins.removeWhere((t) => t['id'] == temoin['id']);
+    });
   }
 
   @override
@@ -84,7 +108,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (_, i) => _TemoinCard(
                       temoin:   _temoins[i],
-                      onDelete: () => _deleteTemoin(_temoins[i]['id'] as int),
+                      onDelete: () => _deleteTemoin(_temoins[i]),
                     ),
                   ),
                 ),
@@ -133,11 +157,9 @@ class _TemoinCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── En-tête card ─────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
             child: Row(children: [
-              // Badge ID
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -160,21 +182,18 @@ class _TemoinCard extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline,
-                    color: Color(0xFF3D4155), size: 20),
+                    color: Colors.redAccent, size: 20),
                 onPressed: onDelete,
-                tooltip: 'Supprimer',
+                tooltip: 'Supprimer le témoin et l\'audio',
               ),
             ]),
           ),
-
-          // ── Infos ────────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _infoRow(Icons.cake_outlined,
-                    temoin['date_naissance'] ?? '—'),
+                _infoRow(Icons.cake_outlined, temoin['date_naissance'] ?? '—'),
                 const SizedBox(height: 6),
                 _infoRow(Icons.location_on_outlined,
                     [temoin['departement'], temoin['region']]
@@ -184,7 +203,6 @@ class _TemoinCard extends StatelessWidget {
                 _infoRow(Icons.access_time_outlined, date),
                 const SizedBox(height: 8),
 
-                // ── Audio ─────────────────────────────────────────────────
                 if (hasAudio)
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -203,9 +221,7 @@ class _TemoinCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              (temoin['chemin_audio'] as String)
-                                  .split('/')
-                                  .last,
+                              (temoin['chemin_audio'] as String).split('/').last,
                               style: const TextStyle(
                                   color: Colors.white, fontSize: 12),
                               overflow: TextOverflow.ellipsis,
@@ -225,11 +241,9 @@ class _TemoinCard extends StatelessWidget {
                         color: Color(0xFF3D4155), size: 14),
                     const SizedBox(width: 6),
                     const Text('Aucun audio',
-                        style: TextStyle(
-                            color: Color(0xFF3D4155), fontSize: 12)),
+                        style: TextStyle(color: Color(0xFF3D4155), fontSize: 12)),
                   ]),
 
-                // ── RGPD ──────────────────────────────────────────────────
                 const SizedBox(height: 8),
                 Row(children: [
                   Icon(
@@ -243,9 +257,7 @@ class _TemoinCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    temoin['accept_rgpd'] == 1
-                        ? 'RGPD accepté'
-                        : 'RGPD non accepté',
+                    temoin['accept_rgpd'] == 1 ? 'RGPD accepté' : 'RGPD non accepté',
                     style: TextStyle(
                       fontSize: 11,
                       color: temoin['accept_rgpd'] == 1
