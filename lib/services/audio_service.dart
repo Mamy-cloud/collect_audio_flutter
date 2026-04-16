@@ -6,8 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class AudioService {
-  // record v4 : AudioRecorder s'appelle Record
-  static final _recorder = Record();
+  static final _recorder = AudioRecorder();
   static final _player   = AudioPlayer();
   static String? _currentPath;
 
@@ -25,10 +24,11 @@ class AudioService {
     _currentPath =
         '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
     await _recorder.start(
+      const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100),
       path: _currentPath!,
-      encoder: AudioEncoder.aacLc,
-      bitRate: 128000,
-      samplingRate: 44100,
     );
   }
 
