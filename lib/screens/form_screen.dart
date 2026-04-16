@@ -7,77 +7,89 @@ import '../services/audio_service.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_dropdown.dart';
 
-// ── Données en dur ────────────────────────────────────────────────────────────
+// ── Départements ──────────────────────────────────────────────────────────────
 
 const List<Map<String, dynamic>> _kDepartements = [
-  {'id': 'dept_01', 'nom': 'Ain'},
-  {'id': 'dept_02', 'nom': 'Aisne'},
-  {'id': 'dept_03', 'nom': 'Allier'},
-  {'id': 'dept_06', 'nom': 'Alpes-Maritimes'},
-  {'id': 'dept_13', 'nom': 'Bouches-du-Rhône'},
-  {'id': 'dept_14', 'nom': 'Calvados'},
   {'id': 'dept_2A', 'nom': 'Corse-du-Sud'},
   {'id': 'dept_2B', 'nom': 'Haute-Corse'},
-  {'id': 'dept_21', 'nom': 'Côte-d\'Or'},
-  {'id': 'dept_31', 'nom': 'Haute-Garonne'},
-  {'id': 'dept_33', 'nom': 'Gironde'},
-  {'id': 'dept_34', 'nom': 'Hérault'},
-  {'id': 'dept_35', 'nom': 'Ille-et-Vilaine'},
-  {'id': 'dept_38', 'nom': 'Isère'},
-  {'id': 'dept_44', 'nom': 'Loire-Atlantique'},
-  {'id': 'dept_45', 'nom': 'Loiret'},
-  {'id': 'dept_54', 'nom': 'Meurthe-et-Moselle'},
-  {'id': 'dept_57', 'nom': 'Moselle'},
-  {'id': 'dept_59', 'nom': 'Nord'},
-  {'id': 'dept_62', 'nom': 'Pas-de-Calais'},
-  {'id': 'dept_67', 'nom': 'Bas-Rhin'},
-  {'id': 'dept_68', 'nom': 'Haut-Rhin'},
-  {'id': 'dept_69', 'nom': 'Rhône'},
-  {'id': 'dept_75', 'nom': 'Paris'},
-  {'id': 'dept_76', 'nom': 'Seine-Maritime'},
-  {'id': 'dept_77', 'nom': 'Seine-et-Marne'},
-  {'id': 'dept_78', 'nom': 'Yvelines'},
-  {'id': 'dept_80', 'nom': 'Somme'},
-  {'id': 'dept_83', 'nom': 'Var'},
-  {'id': 'dept_84', 'nom': 'Vaucluse'},
-  {'id': 'dept_91', 'nom': 'Essonne'},
-  {'id': 'dept_92', 'nom': 'Hauts-de-Seine'},
-  {'id': 'dept_93', 'nom': 'Seine-Saint-Denis'},
-  {'id': 'dept_94', 'nom': 'Val-de-Marne'},
-  {'id': 'dept_95', 'nom': 'Val-d\'Oise'},
 ];
 
+// ── Régions et micro-régions par département ──────────────────────────────────
+
 const List<Map<String, dynamic>> _kRegions = [
-  {'id': 'reg_01', 'departement_id': 'dept_75', 'nom': 'Île-de-France'},
-  {'id': 'reg_02', 'departement_id': 'dept_77', 'nom': 'Seine-et-Marne Est'},
-  {'id': 'reg_03', 'departement_id': 'dept_78', 'nom': 'Yvelines Ouest'},
-  {'id': 'reg_04', 'departement_id': 'dept_91', 'nom': 'Essonne Nord'},
-  {'id': 'reg_05', 'departement_id': 'dept_92', 'nom': 'Hauts-de-Seine Centre'},
-  {'id': 'reg_06', 'departement_id': 'dept_93', 'nom': 'Seine-Saint-Denis Sud'},
-  {'id': 'reg_07', 'departement_id': 'dept_94', 'nom': 'Val-de-Marne Est'},
-  {'id': 'reg_08', 'departement_id': 'dept_95', 'nom': 'Val-d\'Oise Nord'},
-  {'id': 'reg_09', 'departement_id': 'dept_69', 'nom': 'Lyon Métropole'},
-  {'id': 'reg_10', 'departement_id': 'dept_69', 'nom': 'Villeurbanne'},
-  {'id': 'reg_11', 'departement_id': 'dept_13', 'nom': 'Marseille Centre'},
-  {'id': 'reg_12', 'departement_id': 'dept_13', 'nom': 'Aix-en-Provence'},
-  {'id': 'reg_13', 'departement_id': 'dept_31', 'nom': 'Toulouse Métropole'},
-  {'id': 'reg_14', 'departement_id': 'dept_33', 'nom': 'Bordeaux Métropole'},
-  {'id': 'reg_15', 'departement_id': 'dept_59', 'nom': 'Lille Métropole'},
-  {'id': 'reg_16', 'departement_id': 'dept_67', 'nom': 'Strasbourg Eurométropole'},
-  {'id': 'reg_17', 'departement_id': 'dept_44', 'nom': 'Nantes Métropole'},
-  {'id': 'reg_18', 'departement_id': 'dept_35', 'nom': 'Rennes Métropole'},
-  {'id': 'reg_19', 'departement_id': 'dept_34', 'nom': 'Montpellier Méditerranée'},
-  {'id': 'reg_20', 'departement_id': 'dept_38', 'nom': 'Grenoble-Alpes'},
-  {'id': 'reg_21', 'departement_id': 'dept_2A', 'nom': 'Ajaccio'},
-  {'id': 'reg_22', 'departement_id': 'dept_2B', 'nom': 'Bastia'},
-  {'id': 'reg_23', 'departement_id': 'dept_76', 'nom': 'Rouen Normandie'},
-  {'id': 'reg_24', 'departement_id': 'dept_14', 'nom': 'Caen la Mer'},
-  {'id': 'reg_25', 'departement_id': 'dept_57', 'nom': 'Metz Métropole'},
-  {'id': 'reg_26', 'departement_id': 'dept_54', 'nom': 'Grand Nancy'},
-  {'id': 'reg_27', 'departement_id': 'dept_06', 'nom': 'Nice Côte d\'Azur'},
-  {'id': 'reg_28', 'departement_id': 'dept_83', 'nom': 'Toulon Provence'},
-  {'id': 'reg_29', 'departement_id': 'dept_84', 'nom': 'Avignon'},
-  {'id': 'reg_30', 'departement_id': 'dept_80', 'nom': 'Amiens Métropole'},
+
+  // ── Corse-du-Sud (2A) ─────────────────────────────────────────────────────
+  {'id': 'reg_2A_01', 'departement_id': 'dept_2A', 'nom': 'Ajaccio'},
+  {'id': 'reg_2A_02', 'departement_id': 'dept_2A', 'nom': 'Ajaccio — Gravona'},
+  {'id': 'reg_2A_03', 'departement_id': 'dept_2A', 'nom': 'Ajaccio — Prunelli'},
+  {'id': 'reg_2A_04', 'departement_id': 'dept_2A', 'nom': 'Ajaccio — Alata'},
+  {'id': 'reg_2A_05', 'departement_id': 'dept_2A', 'nom': 'Ajaccio — Appietto'},
+  {'id': 'reg_2A_06', 'departement_id': 'dept_2A', 'nom': 'Ajaccio — Afa'},
+  {'id': 'reg_2A_07', 'departement_id': 'dept_2A', 'nom': 'Alta Rocca — Aullène'},
+  {'id': 'reg_2A_08', 'departement_id': 'dept_2A', 'nom': 'Alta Rocca — Levie'},
+  {'id': 'reg_2A_09', 'departement_id': 'dept_2A', 'nom': 'Alta Rocca — Serra-di-Scopamène'},
+  {'id': 'reg_2A_10', 'departement_id': 'dept_2A', 'nom': 'Sartenais-Valinco — Sartène'},
+  {'id': 'reg_2A_11', 'departement_id': 'dept_2A', 'nom': 'Sartenais-Valinco — Propriano'},
+  {'id': 'reg_2A_12', 'departement_id': 'dept_2A', 'nom': 'Sartenais-Valinco — Olmeto'},
+  {'id': 'reg_2A_13', 'departement_id': 'dept_2A', 'nom': 'Taravo — Petreto-Bicchisano'},
+  {'id': 'reg_2A_14', 'departement_id': 'dept_2A', 'nom': 'Taravo — Santa-Maria-Sicché'},
+  {'id': 'reg_2A_15', 'departement_id': 'dept_2A', 'nom': 'Gravona-Prunelli — Cauro'},
+  {'id': 'reg_2A_16', 'departement_id': 'dept_2A', 'nom': 'Gravona-Prunelli — Bastelicaccia'},
+  {'id': 'reg_2A_17', 'departement_id': 'dept_2A', 'nom': 'Gravona-Prunelli — Eccica-Suarella'},
+  {'id': 'reg_2A_18', 'departement_id': 'dept_2A', 'nom': 'Cinarca — Calcatoggio'},
+  {'id': 'reg_2A_19', 'departement_id': 'dept_2A', 'nom': 'Cinarca — Cannelle'},
+  {'id': 'reg_2A_20', 'departement_id': 'dept_2A', 'nom': 'Cinarca — Ambiegna'},
+  {'id': 'reg_2A_21', 'departement_id': 'dept_2A', 'nom': 'Cruzzini-Cinarca — Azzana'},
+  {'id': 'reg_2A_22', 'departement_id': 'dept_2A', 'nom': 'Cruzzini-Cinarca — Murzo'},
+  {'id': 'reg_2A_23', 'departement_id': 'dept_2A', 'nom': 'Cruzzini-Cinarca — Poggiolo'},
+  {'id': 'reg_2A_24', 'departement_id': 'dept_2A', 'nom': 'Porto — Ota'},
+  {'id': 'reg_2A_25', 'departement_id': 'dept_2A', 'nom': 'Porto — Serriera'},
+  {'id': 'reg_2A_26', 'departement_id': 'dept_2A', 'nom': 'Porto — Osani'},
+  {'id': 'reg_2A_27', 'departement_id': 'dept_2A', 'nom': 'Niolu-Omessa — Calacuccia'},
+  {'id': 'reg_2A_28', 'departement_id': 'dept_2A', 'nom': 'Niolu-Omessa — Casamaccioli'},
+  {'id': 'reg_2A_29', 'departement_id': 'dept_2A', 'nom': 'Niolu-Omessa — Corscia'},
+  {'id': 'reg_2A_30', 'departement_id': 'dept_2A', 'nom': 'Balagne Sud — Mela'},
+  {'id': 'reg_2A_31', 'departement_id': 'dept_2A', 'nom': 'Balagne Sud — Zilia'},
+  {'id': 'reg_2A_32', 'departement_id': 'dept_2A', 'nom': 'Balagne Sud — Montegrosso'},
+
+  // ── Haute-Corse (2B) ──────────────────────────────────────────────────────
+  {'id': 'reg_2B_01', 'departement_id': 'dept_2B', 'nom': 'Bastia'},
+  {'id': 'reg_2B_02', 'departement_id': 'dept_2B', 'nom': 'Bastia — Cardo'},
+  {'id': 'reg_2B_03', 'departement_id': 'dept_2B', 'nom': 'Bastia — Lupino'},
+  {'id': 'reg_2B_04', 'departement_id': 'dept_2B', 'nom': 'Cap Corse — Ersa'},
+  {'id': 'reg_2B_05', 'departement_id': 'dept_2B', 'nom': 'Cap Corse — Rogliano'},
+  {'id': 'reg_2B_06', 'departement_id': 'dept_2B', 'nom': 'Cap Corse — Pino'},
+  {'id': 'reg_2B_07', 'departement_id': 'dept_2B', 'nom': 'Cap Corse — Nonza'},
+  {'id': 'reg_2B_08', 'departement_id': 'dept_2B', 'nom': 'Nebbio — Saint-Florent'},
+  {'id': 'reg_2B_09', 'departement_id': 'dept_2B', 'nom': 'Nebbio — Oletta'},
+  {'id': 'reg_2B_10', 'departement_id': 'dept_2B', 'nom': 'Nebbio — Murato'},
+  {'id': 'reg_2B_11', 'departement_id': 'dept_2B', 'nom': 'Conca d\'Oro — San-Martino-di-Lota'},
+  {'id': 'reg_2B_12', 'departement_id': 'dept_2B', 'nom': 'Conca d\'Oro — Ville-di-Pietrabugno'},
+  {'id': 'reg_2B_13', 'departement_id': 'dept_2B', 'nom': 'Casinca — Vescovato'},
+  {'id': 'reg_2B_14', 'departement_id': 'dept_2B', 'nom': 'Casinca — Penta-di-Casinca'},
+  {'id': 'reg_2B_15', 'departement_id': 'dept_2B', 'nom': 'Casinca — Venzolasca'},
+  {'id': 'reg_2B_16', 'departement_id': 'dept_2B', 'nom': 'Castagniccia — Piedicroce'},
+  {'id': 'reg_2B_17', 'departement_id': 'dept_2B', 'nom': 'Castagniccia — Cervione'},
+  {'id': 'reg_2B_18', 'departement_id': 'dept_2B', 'nom': 'Castagniccia — Orezza'},
+  {'id': 'reg_2B_19', 'departement_id': 'dept_2B', 'nom': 'Fiumorbo-Castello — Ghisonaccia'},
+  {'id': 'reg_2B_20', 'departement_id': 'dept_2B', 'nom': 'Fiumorbo-Castello — Aléria'},
+  {'id': 'reg_2B_21', 'departement_id': 'dept_2B', 'nom': 'Fiumorbo-Castello — Serra-di-Fiumorbo'},
+  {'id': 'reg_2B_22', 'departement_id': 'dept_2B', 'nom': 'Plaine Orientale — Linguizzetta'},
+  {'id': 'reg_2B_23', 'departement_id': 'dept_2B', 'nom': 'Plaine Orientale — Tallone'},
+  {'id': 'reg_2B_24', 'departement_id': 'dept_2B', 'nom': 'Plaine Orientale — Prunete'},
+  {'id': 'reg_2B_25', 'departement_id': 'dept_2B', 'nom': 'Cortenais-Venaco — Corte'},
+  {'id': 'reg_2B_26', 'departement_id': 'dept_2B', 'nom': 'Cortenais-Venaco — Venaco'},
+  {'id': 'reg_2B_27', 'departement_id': 'dept_2B', 'nom': 'Cortenais-Venaco — Soveria'},
+  {'id': 'reg_2B_28', 'departement_id': 'dept_2B', 'nom': 'Bozio — Sermano'},
+  {'id': 'reg_2B_29', 'departement_id': 'dept_2B', 'nom': 'Bozio — Bustanico'},
+  {'id': 'reg_2B_30', 'departement_id': 'dept_2B', 'nom': 'Bozio — Mazzola'},
+  {'id': 'reg_2B_31', 'departement_id': 'dept_2B', 'nom': 'Balagne — Calvi'},
+  {'id': 'reg_2B_32', 'departement_id': 'dept_2B', 'nom': 'Balagne — L\'Île-Rousse'},
+  {'id': 'reg_2B_33', 'departement_id': 'dept_2B', 'nom': 'Balagne — Belgodère'},
+  {'id': 'reg_2B_34', 'departement_id': 'dept_2B', 'nom': 'Balagne — Pigna'},
+  {'id': 'reg_2B_35', 'departement_id': 'dept_2B', 'nom': 'Ostriconi — Pietralba'},
+  {'id': 'reg_2B_36', 'departement_id': 'dept_2B', 'nom': 'Ostriconi — Novella'},
+  {'id': 'reg_2B_37', 'departement_id': 'dept_2B', 'nom': 'Ostriconi — Palasca'},
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,7 +117,6 @@ class _FormScreenState extends State<FormScreen> {
 
   List<Map<String, dynamic>> _filteredRegions = [];
 
-  // URL de l'API FastAPI — remplacez par votre URL réelle
   static const String _apiBaseUrl = 'https://votre-api.exemple.com';
 
   @override
@@ -114,15 +125,11 @@ class _FormScreenState extends State<FormScreen> {
     _checkFirstLaunch();
   }
 
-  // ── 1er lancement ──────────────────────────────────────────────────────────
-
   Future<void> _checkFirstLaunch() async {
     final prefs   = await SharedPreferences.getInstance();
     final isFirst = prefs.getBool('first_launch') ?? true;
     if (isFirst) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showConnectionSnackbar();
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showConnectionSnackbar());
       await prefs.setBool('first_launch', false);
     }
   }
@@ -149,27 +156,20 @@ class _FormScreenState extends State<FormScreen> {
           side: const BorderSide(color: Color(0xFF3ECF8E), width: 1),
         ),
         action: SnackBarAction(
-          label:     'OK',
-          textColor: const Color(0xFF3ECF8E),
-          onPressed: () {},
-        ),
+          label: 'OK', textColor: const Color(0xFF3ECF8E), onPressed: () {}),
       ),
     );
   }
 
-  // ── Département → filtre régions ───────────────────────────────────────────
-
   void _onDeptChanged(String? deptId) {
     setState(() {
-      _deptId  = deptId;
-      _regionId = null;
+      _deptId          = deptId;
+      _regionId        = null;
       _filteredRegions = deptId == null
           ? []
           : _kRegions.where((r) => r['departement_id'] == deptId).toList();
     });
   }
-
-  // ── Date ───────────────────────────────────────────────────────────────────
 
   Future<void> _pickDate() async {
     final date = await showDatePicker(
@@ -180,9 +180,7 @@ class _FormScreenState extends State<FormScreen> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF3ECF8E),
-            surface: Color(0xFF1A1D27),
-          ),
+            primary: Color(0xFF3ECF8E), surface: Color(0xFF1A1D27)),
         ),
         child: child!,
       ),
@@ -193,18 +191,14 @@ class _FormScreenState extends State<FormScreen> {
     }
   }
 
-  // ── Audio ──────────────────────────────────────────────────────────────────
-
   Future<void> _toggleRecording() async {
     if (_isRecording) {
       final path = await AudioService.stopRecording();
       if (path != null) {
         final dur = await AudioService.getAudioDuration(path);
         setState(() {
-          _audioPath     = path;
-          _audioDuration = dur;
-          _isRecording   = false;
-          _hasAudio      = true;
+          _audioPath = path; _audioDuration = dur;
+          _isRecording = false; _hasAudio = true;
         });
       }
     } else {
@@ -219,11 +213,7 @@ class _FormScreenState extends State<FormScreen> {
     final path = await AudioService.pickAudioFile();
     if (path != null) {
       final dur = await AudioService.getAudioDuration(path);
-      setState(() {
-        _audioPath     = path;
-        _audioDuration = dur;
-        _hasAudio      = true;
-      });
+      setState(() { _audioPath = path; _audioDuration = dur; _hasAudio = true; });
     }
   }
 
@@ -231,36 +221,28 @@ class _FormScreenState extends State<FormScreen> {
     _audioPath = null; _audioDuration = null; _hasAudio = false;
   });
 
-  // ── Sauvegarde SQLite ──────────────────────────────────────────────────────
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_deptId   == null) { _snack('Sélectionnez un département'); return; }
-    if (_regionId == null) { _snack('Sélectionnez une région');     return; }
+    if (_deptId   == null) { _snack('Sélectionnez un département');     return; }
+    if (_regionId == null) { _snack('Sélectionnez une région');         return; }
     if (!_hasAudio)        { _snack('Ajoutez un enregistrement audio'); return; }
-    if (!_acceptRgpd)      { _snack('Acceptez le partage RGPD');    return; }
+    if (!_acceptRgpd)      { _snack('Acceptez le partage RGPD');        return; }
 
     setState(() => _isSaving = true);
     try {
-      // Données à sauvegarder — clé/valeur directe
       final Map<String, dynamic> data = {
-        'nom':           _nomCtrl.text.trim(),
-        'prenom':        _prenomCtrl.text.trim(),
+        'nom':            _nomCtrl.text.trim(),
+        'prenom':         _prenomCtrl.text.trim(),
         'date_naissance': _dateCtrl.text.trim(),
-        'departement':   _deptId,
-        'region':        _regionId,
-        'chemin_audio':  _audioPath,
-        'duree_audio':   _audioDuration,
-        'accept_rgpd':   _acceptRgpd ? 1 : 0,
-        'date_creation': DateTime.now().toIso8601String(),
+        'departement':    _deptId,
+        'region':         _regionId,
+        'chemin_audio':   _audioPath,
+        'duree_audio':    _audioDuration,
+        'accept_rgpd':    _acceptRgpd ? 1 : 0,
+        'date_creation':  DateTime.now().toIso8601String(),
       };
-
-      // 1. Sauvegarde locale SQLite
       await LocalDatabase.insertTemoin(data);
-
-      // 2. Exemple d'appel API POST vers FastAPI (optionnel ici)
-      // await _postToApi(data);
-
+      // await _postToApi(data); // décommenter quand FastAPI prêt
       _snack('Sauvegardé localement ✓', success: true);
       _reset();
     } catch (e) {
@@ -270,8 +252,6 @@ class _FormScreenState extends State<FormScreen> {
     }
   }
 
-  /// Exemple d'appel API POST vers FastAPI
-  /// À appeler quand vous êtes prêt à connecter le backend
   Future<void> _postToApi(Map<String, dynamic> data) async {
     final response = await http.post(
       Uri.parse('$_apiBaseUrl/temoins'),
@@ -286,13 +266,9 @@ class _FormScreenState extends State<FormScreen> {
   void _reset() {
     _nomCtrl.clear(); _prenomCtrl.clear(); _dateCtrl.clear();
     setState(() {
-      _deptId          = null;
-      _regionId        = null;
-      _filteredRegions = [];
-      _audioPath       = null;
-      _audioDuration   = null;
-      _acceptRgpd      = false;
-      _hasAudio        = false;
+      _deptId = null; _regionId = null; _filteredRegions = [];
+      _audioPath = null; _audioDuration = null;
+      _acceptRgpd = false; _hasAudio = false;
     });
   }
 
@@ -304,8 +280,6 @@ class _FormScreenState extends State<FormScreen> {
       behavior:        SnackBarBehavior.floating,
     ));
   }
-
-  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +298,6 @@ class _FormScreenState extends State<FormScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
 
-              // ── Nom & Prénom ──────────────────────────────────────────────
               Row(children: [
                 Expanded(child: CustomTextField(
                   controller: _nomCtrl, label: 'Nom *', hint: 'ex. Ferracci')),
@@ -334,19 +307,16 @@ class _FormScreenState extends State<FormScreen> {
               ]),
               const SizedBox(height: 16),
 
-              // ── Date de naissance ─────────────────────────────────────────
               CustomTextField(
                 controller: _dateCtrl,
-                label:    'Date de naissance *',
-                hint:     'Sélectionner',
-                readOnly: true,
-                onTap:    _pickDate,
-                suffix:   const Icon(Icons.calendar_today_outlined,
+                label: 'Date de naissance *', hint: 'Sélectionner',
+                readOnly: true, onTap: _pickDate,
+                suffix: const Icon(Icons.calendar_today_outlined,
                     color: Color(0xFF3ECF8E), size: 18),
               ),
               const SizedBox(height: 16),
 
-              // ── Département ───────────────────────────────────────────────
+              // ── Département (uniquement Corse) ────────────────────────────
               CustomDropdown(
                 label:      'Département *',
                 value:      _deptId,
@@ -357,14 +327,14 @@ class _FormScreenState extends State<FormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── Région ────────────────────────────────────────────────────
+              // ── Région / Micro-région filtrée ─────────────────────────────
               if (_deptId == null)
                 _regionPlaceholder()
               else if (_filteredRegions.isEmpty)
                 _regionEmpty()
               else
                 CustomDropdown(
-                  label:      'Région *',
+                  label:      'Région / Micro-région *',
                   value:      _regionId,
                   items:      _filteredRegions,
                   displayKey: 'nom',
@@ -373,7 +343,6 @@ class _FormScreenState extends State<FormScreen> {
                 ),
               const SizedBox(height: 24),
 
-              // ── Audio ─────────────────────────────────────────────────────
               const Text('Enregistrement audio *',
                   style: TextStyle(color: Color(0xFF8A8F9E), fontSize: 12,
                       fontWeight: FontWeight.w500, letterSpacing: 0.5)),
@@ -389,10 +358,8 @@ class _FormScreenState extends State<FormScreen> {
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: _audioBtn(
-                    icon:  Icons.upload_file_outlined,
-                    label: 'Importer MP3',
-                    color: const Color(0xFF3ECF8E),
-                    onPressed: _pickAudio,
+                    icon: Icons.upload_file_outlined, label: 'Importer MP3',
+                    color: const Color(0xFF3ECF8E), onPressed: _pickAudio,
                   )),
                 ]),
                 if (_isRecording)
@@ -410,7 +377,6 @@ class _FormScreenState extends State<FormScreen> {
 
               const SizedBox(height: 24),
 
-              // ── RGPD ──────────────────────────────────────────────────────
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF1A1D27),
@@ -421,10 +387,10 @@ class _FormScreenState extends State<FormScreen> {
                         : const Color(0xFF2D3142)),
                 ),
                 child: CheckboxListTile(
-                  value:       _acceptRgpd,
-                  onChanged:   (v) => setState(() => _acceptRgpd = v ?? false),
+                  value: _acceptRgpd,
+                  onChanged: (v) => setState(() => _acceptRgpd = v ?? false),
                   activeColor: const Color(0xFF3ECF8E),
-                  checkColor:  Colors.black,
+                  checkColor: Colors.black,
                   title: const Text(
                     'Le témoin accepte le partage de ses informations',
                     style: TextStyle(color: Colors.white, fontSize: 13)),
@@ -436,7 +402,6 @@ class _FormScreenState extends State<FormScreen> {
               ),
               const SizedBox(height: 28),
 
-              // ── Bouton sauvegarder ────────────────────────────────────────
               SizedBox(
                 height: 52,
                 child: ElevatedButton.icon(
@@ -462,7 +427,6 @@ class _FormScreenState extends State<FormScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── Bouton remplir un autre ───────────────────────────────────
               SizedBox(
                 height: 48,
                 child: OutlinedButton.icon(
@@ -473,7 +437,7 @@ class _FormScreenState extends State<FormScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
-                  icon:  const Icon(Icons.add),
+                  icon: const Icon(Icons.add),
                   label: const Text('Remplir un autre formulaire',
                       style: TextStyle(fontWeight: FontWeight.w500)),
                 ),
@@ -485,8 +449,6 @@ class _FormScreenState extends State<FormScreen> {
       ),
     );
   }
-
-  // ── Widgets locaux ─────────────────────────────────────────────────────────
 
   Widget _regionPlaceholder() => Container(
     padding: const EdgeInsets.all(16),
@@ -528,7 +490,7 @@ class _FormScreenState extends State<FormScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      icon:  Icon(icon, size: 18),
+      icon: Icon(icon, size: 18),
       label: Text(label, style: const TextStyle(fontSize: 13)),
     );
   }
@@ -538,7 +500,8 @@ class _FormScreenState extends State<FormScreen> {
     decoration: BoxDecoration(
       color: const Color(0xFF1A1D27),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xFF3ECF8E).withValues(alpha: 0.4)),
+      border: Border.all(
+          color: const Color(0xFF3ECF8E).withValues(alpha: 0.4)),
     ),
     child: Row(children: [
       const Icon(Icons.audio_file, color: Color(0xFF3ECF8E)),
