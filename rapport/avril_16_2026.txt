@@ -2,4 +2,5 @@
 -création des codes pour le flutter
 -build pour android et ios
 
-
+-blocage sur la gestion du db 
+-utilisation de fastApi pour la gestion du logique métier

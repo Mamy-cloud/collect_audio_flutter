@@ -1,13 +1,86 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../database/local_database.dart';
-import '../models/witness_model.dart';
 import '../services/audio_service.dart';
-import '../services/cache_service.dart';
-import '../services/resilient_sync_service.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_dropdown.dart';
+
+// ── Données en dur ────────────────────────────────────────────────────────────
+
+const List<Map<String, dynamic>> _kDepartements = [
+  {'id': 'dept_01', 'nom': 'Ain'},
+  {'id': 'dept_02', 'nom': 'Aisne'},
+  {'id': 'dept_03', 'nom': 'Allier'},
+  {'id': 'dept_06', 'nom': 'Alpes-Maritimes'},
+  {'id': 'dept_13', 'nom': 'Bouches-du-Rhône'},
+  {'id': 'dept_14', 'nom': 'Calvados'},
+  {'id': 'dept_2A', 'nom': 'Corse-du-Sud'},
+  {'id': 'dept_2B', 'nom': 'Haute-Corse'},
+  {'id': 'dept_21', 'nom': 'Côte-d\'Or'},
+  {'id': 'dept_31', 'nom': 'Haute-Garonne'},
+  {'id': 'dept_33', 'nom': 'Gironde'},
+  {'id': 'dept_34', 'nom': 'Hérault'},
+  {'id': 'dept_35', 'nom': 'Ille-et-Vilaine'},
+  {'id': 'dept_38', 'nom': 'Isère'},
+  {'id': 'dept_44', 'nom': 'Loire-Atlantique'},
+  {'id': 'dept_45', 'nom': 'Loiret'},
+  {'id': 'dept_54', 'nom': 'Meurthe-et-Moselle'},
+  {'id': 'dept_57', 'nom': 'Moselle'},
+  {'id': 'dept_59', 'nom': 'Nord'},
+  {'id': 'dept_62', 'nom': 'Pas-de-Calais'},
+  {'id': 'dept_67', 'nom': 'Bas-Rhin'},
+  {'id': 'dept_68', 'nom': 'Haut-Rhin'},
+  {'id': 'dept_69', 'nom': 'Rhône'},
+  {'id': 'dept_75', 'nom': 'Paris'},
+  {'id': 'dept_76', 'nom': 'Seine-Maritime'},
+  {'id': 'dept_77', 'nom': 'Seine-et-Marne'},
+  {'id': 'dept_78', 'nom': 'Yvelines'},
+  {'id': 'dept_80', 'nom': 'Somme'},
+  {'id': 'dept_83', 'nom': 'Var'},
+  {'id': 'dept_84', 'nom': 'Vaucluse'},
+  {'id': 'dept_91', 'nom': 'Essonne'},
+  {'id': 'dept_92', 'nom': 'Hauts-de-Seine'},
+  {'id': 'dept_93', 'nom': 'Seine-Saint-Denis'},
+  {'id': 'dept_94', 'nom': 'Val-de-Marne'},
+  {'id': 'dept_95', 'nom': 'Val-d\'Oise'},
+];
+
+const List<Map<String, dynamic>> _kRegions = [
+  {'id': 'reg_01', 'departement_id': 'dept_75', 'nom': 'Île-de-France'},
+  {'id': 'reg_02', 'departement_id': 'dept_77', 'nom': 'Seine-et-Marne Est'},
+  {'id': 'reg_03', 'departement_id': 'dept_78', 'nom': 'Yvelines Ouest'},
+  {'id': 'reg_04', 'departement_id': 'dept_91', 'nom': 'Essonne Nord'},
+  {'id': 'reg_05', 'departement_id': 'dept_92', 'nom': 'Hauts-de-Seine Centre'},
+  {'id': 'reg_06', 'departement_id': 'dept_93', 'nom': 'Seine-Saint-Denis Sud'},
+  {'id': 'reg_07', 'departement_id': 'dept_94', 'nom': 'Val-de-Marne Est'},
+  {'id': 'reg_08', 'departement_id': 'dept_95', 'nom': 'Val-d\'Oise Nord'},
+  {'id': 'reg_09', 'departement_id': 'dept_69', 'nom': 'Lyon Métropole'},
+  {'id': 'reg_10', 'departement_id': 'dept_69', 'nom': 'Villeurbanne'},
+  {'id': 'reg_11', 'departement_id': 'dept_13', 'nom': 'Marseille Centre'},
+  {'id': 'reg_12', 'departement_id': 'dept_13', 'nom': 'Aix-en-Provence'},
+  {'id': 'reg_13', 'departement_id': 'dept_31', 'nom': 'Toulouse Métropole'},
+  {'id': 'reg_14', 'departement_id': 'dept_33', 'nom': 'Bordeaux Métropole'},
+  {'id': 'reg_15', 'departement_id': 'dept_59', 'nom': 'Lille Métropole'},
+  {'id': 'reg_16', 'departement_id': 'dept_67', 'nom': 'Strasbourg Eurométropole'},
+  {'id': 'reg_17', 'departement_id': 'dept_44', 'nom': 'Nantes Métropole'},
+  {'id': 'reg_18', 'departement_id': 'dept_35', 'nom': 'Rennes Métropole'},
+  {'id': 'reg_19', 'departement_id': 'dept_34', 'nom': 'Montpellier Méditerranée'},
+  {'id': 'reg_20', 'departement_id': 'dept_38', 'nom': 'Grenoble-Alpes'},
+  {'id': 'reg_21', 'departement_id': 'dept_2A', 'nom': 'Ajaccio'},
+  {'id': 'reg_22', 'departement_id': 'dept_2B', 'nom': 'Bastia'},
+  {'id': 'reg_23', 'departement_id': 'dept_76', 'nom': 'Rouen Normandie'},
+  {'id': 'reg_24', 'departement_id': 'dept_14', 'nom': 'Caen la Mer'},
+  {'id': 'reg_25', 'departement_id': 'dept_57', 'nom': 'Metz Métropole'},
+  {'id': 'reg_26', 'departement_id': 'dept_54', 'nom': 'Grand Nancy'},
+  {'id': 'reg_27', 'departement_id': 'dept_06', 'nom': 'Nice Côte d\'Azur'},
+  {'id': 'reg_28', 'departement_id': 'dept_83', 'nom': 'Toulon Provence'},
+  {'id': 'reg_29', 'departement_id': 'dept_84', 'nom': 'Avignon'},
+  {'id': 'reg_30', 'departement_id': 'dept_80', 'nom': 'Amiens Métropole'},
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class FormScreen extends StatefulWidget {
   const FormScreen({super.key});
@@ -30,29 +103,23 @@ class _FormScreenState extends State<FormScreen> {
   bool     _hasAudio    = false;
   bool     _isSaving    = false;
 
-  // Toutes les données chargées depuis le cache SQLite
-  List<Map<String, dynamic>> _depts          = [];
-  List<Map<String, dynamic>> _allRegions     = [];
-
-  // Régions filtrées selon le département sélectionné
   List<Map<String, dynamic>> _filteredRegions = [];
+
+  // URL de l'API FastAPI — remplacez par votre URL réelle
+  static const String _apiBaseUrl = 'https://votre-api.exemple.com';
 
   @override
   void initState() {
     super.initState();
-    _loadOptions();
     _checkFirstLaunch();
   }
 
-  // ── 1er lancement — demande connexion internet ──────────────────────────────
+  // ── 1er lancement ──────────────────────────────────────────────────────────
 
   Future<void> _checkFirstLaunch() async {
-    final prefs     = await SharedPreferences.getInstance();
-    final isFirst   = prefs.getBool('first_launch') ?? true;
-    final hasCache  = await LocalDatabase.hasOfflineData();
-
-    if (isFirst || !hasCache) {
-      // Attend que le widget soit monté
+    final prefs   = await SharedPreferences.getInstance();
+    final isFirst = prefs.getBool('first_launch') ?? true;
+    if (isFirst) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showConnectionSnackbar();
       });
@@ -65,12 +132,12 @@ class _FormScreenState extends State<FormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(children: const [
-          Icon(Icons.wifi_outlined, color: Colors.white, size: 18),
+          Icon(Icons.info_outline, color: Colors.white, size: 18),
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Connectez-vous à internet pour charger les départements et régions',
-              style: TextStyle(fontSize: 13),
+              'Bienvenue ! Remplissez le formulaire pour enregistrer un témoin.',
+              style: TextStyle(fontSize: 13, color: Colors.white),
             ),
           ),
         ]),
@@ -90,37 +157,19 @@ class _FormScreenState extends State<FormScreen> {
     );
   }
 
-  // ── Chargement options depuis cache SQLite ──────────────────────────────────
-
-  Future<void> _loadOptions() async {
-    final d = await CacheService.getDepartements();
-    final r = await CacheService.getRegionsCorse();
-    if (mounted) {
-      setState(() {
-        _depts      = d;
-        _allRegions = r;
-      });
-    }
-  }
-
-  // ── Filtre les régions selon le département sélectionné ────────────────────
+  // ── Département → filtre régions ───────────────────────────────────────────
 
   void _onDeptChanged(String? deptId) {
     setState(() {
-      _deptId   = deptId;
-      _regionId = null; // reset la région
-
-      if (deptId == null) {
-        _filteredRegions = [];
-      } else {
-        _filteredRegions = _allRegions
-            .where((r) => r['departement_id'] == deptId)
-            .toList();
-      }
+      _deptId  = deptId;
+      _regionId = null;
+      _filteredRegions = deptId == null
+          ? []
+          : _kRegions.where((r) => r['departement_id'] == deptId).toList();
     });
   }
 
-  // ── Date de naissance ──────────────────────────────────────────────────────
+  // ── Date ───────────────────────────────────────────────────────────────────
 
   Future<void> _pickDate() async {
     final date = await showDatePicker(
@@ -131,8 +180,8 @@ class _FormScreenState extends State<FormScreen> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.dark(
-            primary:   Color(0xFF3ECF8E),
-            surface:   Color(0xFF1A1D27),
+            primary: Color(0xFF3ECF8E),
+            surface: Color(0xFF1A1D27),
           ),
         ),
         child: child!,
@@ -152,10 +201,10 @@ class _FormScreenState extends State<FormScreen> {
       if (path != null) {
         final dur = await AudioService.getAudioDuration(path);
         setState(() {
-          _audioPath    = path;
+          _audioPath     = path;
           _audioDuration = dur;
-          _isRecording  = false;
-          _hasAudio     = true;
+          _isRecording   = false;
+          _hasAudio      = true;
         });
       }
     } else {
@@ -171,9 +220,9 @@ class _FormScreenState extends State<FormScreen> {
     if (path != null) {
       final dur = await AudioService.getAudioDuration(path);
       setState(() {
-        _audioPath    = path;
+        _audioPath     = path;
         _audioDuration = dur;
-        _hasAudio     = true;
+        _hasAudio      = true;
       });
     }
   }
@@ -182,7 +231,7 @@ class _FormScreenState extends State<FormScreen> {
     _audioPath = null; _audioDuration = null; _hasAudio = false;
   });
 
-  // ── Sauvegarde ─────────────────────────────────────────────────────────────
+  // ── Sauvegarde SQLite ──────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -193,28 +242,44 @@ class _FormScreenState extends State<FormScreen> {
 
     setState(() => _isSaving = true);
     try {
-      await LocalDatabase.insertWitness(WitnessModel(
-        nom:           _nomCtrl.text.trim(),
-        prenom:        _prenomCtrl.text.trim(),
-        dateNaissance: _dateCtrl.text.trim(),
-        departementId: _deptId!,
-        regionId:      _regionId!,
-        audioPath:     _audioPath,
-        audioDuration: _audioDuration,
-        acceptRgpd:    _acceptRgpd,
-        createdAt:     DateTime.now().toIso8601String(),
-      ));
+      // Données à sauvegarder — clé/valeur directe
+      final Map<String, dynamic> data = {
+        'nom':           _nomCtrl.text.trim(),
+        'prenom':        _prenomCtrl.text.trim(),
+        'date_naissance': _dateCtrl.text.trim(),
+        'departement':   _deptId,
+        'region':        _regionId,
+        'chemin_audio':  _audioPath,
+        'duree_audio':   _audioDuration,
+        'accept_rgpd':   _acceptRgpd ? 1 : 0,
+        'date_creation': DateTime.now().toIso8601String(),
+      };
+
+      // 1. Sauvegarde locale SQLite
+      await LocalDatabase.insertTemoin(data);
+
+      // 2. Exemple d'appel API POST vers FastAPI (optionnel ici)
+      // await _postToApi(data);
+
       _snack('Sauvegardé localement ✓', success: true);
-
-      // Tente une sync immédiate si en ligne
-      final online = await ResilientSyncService.isOnline();
-      if (online) ResilientSyncService.syncAll();
-
       _reset();
     } catch (e) {
       _snack('Erreur : $e');
     } finally {
       setState(() => _isSaving = false);
+    }
+  }
+
+  /// Exemple d'appel API POST vers FastAPI
+  /// À appeler quand vous êtes prêt à connecter le backend
+  Future<void> _postToApi(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('$_apiBaseUrl/temoins'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Erreur API : ${response.statusCode}');
     }
   }
 
@@ -250,13 +315,6 @@ class _FormScreenState extends State<FormScreen> {
         backgroundColor: const Color(0xFF1A1D27),
         title: const Text('Nouveau témoin',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        actions: [
-          TextButton.icon(
-            onPressed: () => context.go('/transfert'),
-            icon:  const Icon(Icons.cloud_upload_outlined, color: Color(0xFF3ECF8E)),
-            label: const Text('Cloud', style: TextStyle(color: Color(0xFF3ECF8E))),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -292,13 +350,14 @@ class _FormScreenState extends State<FormScreen> {
               CustomDropdown(
                 label:      'Département *',
                 value:      _deptId,
-                items:      _depts,
-                displayKey: 'name_departement',
-                onChanged:  _onDeptChanged,   // ← filtre les régions
+                items:      _kDepartements,
+                displayKey: 'nom',
+                valueKey:   'id',
+                onChanged:  _onDeptChanged,
               ),
               const SizedBox(height: 16),
 
-              // ── Région — filtrée selon le département ─────────────────────
+              // ── Région ────────────────────────────────────────────────────
               if (_deptId == null)
                 _regionPlaceholder()
               else if (_filteredRegions.isEmpty)
@@ -308,7 +367,8 @@ class _FormScreenState extends State<FormScreen> {
                   label:      'Région *',
                   value:      _regionId,
                   items:      _filteredRegions,
-                  displayKey: 'name_region',
+                  displayKey: 'nom',
+                  valueKey:   'id',
                   onChanged:  (v) => setState(() => _regionId = v),
                 ),
               const SizedBox(height: 24),
@@ -395,7 +455,7 @@ class _FormScreenState extends State<FormScreen> {
                               strokeWidth: 2, color: Colors.black))
                       : const Icon(Icons.save_outlined),
                   label: Text(
-                    _isSaving ? 'Sauvegarde...' : 'Sauvegarder localement',
+                    _isSaving ? 'Sauvegarde...' : 'Enregistrer le formulaire',
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 15)),
                 ),
@@ -426,44 +486,37 @@ class _FormScreenState extends State<FormScreen> {
     );
   }
 
-  // ── Widgets locaux ──────────────────────────────────────────────────────────
+  // ── Widgets locaux ─────────────────────────────────────────────────────────
 
-  // Placeholder région quand aucun département sélectionné
-  Widget _regionPlaceholder() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color:        const Color(0xFF1A1D27),
-        borderRadius: BorderRadius.circular(8),
-        border:       Border.all(color: const Color(0xFF2D3142)),
-      ),
-      child: const Row(children: [
-        Icon(Icons.info_outline, color: Color(0xFF3D4155), size: 16),
-        SizedBox(width: 8),
-        Text('Sélectionnez d\'abord un département',
-            style: TextStyle(color: Color(0xFF3D4155), fontSize: 13)),
-      ]),
-    );
-  }
+  Widget _regionPlaceholder() => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF1A1D27),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xFF2D3142)),
+    ),
+    child: const Row(children: [
+      Icon(Icons.info_outline, color: Color(0xFF3D4155), size: 16),
+      SizedBox(width: 8),
+      Text('Sélectionnez d\'abord un département',
+          style: TextStyle(color: Color(0xFF3D4155), fontSize: 13)),
+    ]),
+  );
 
-  // Message si aucune région trouvée pour ce département
-  Widget _regionEmpty() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color:        const Color(0xFF1A1D27),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color: Colors.orange.withValues(alpha: 0.4)),
-      ),
-      child: const Row(children: [
-        Icon(Icons.warning_amber_outlined, color: Colors.orange, size: 16),
-        SizedBox(width: 8),
-        Text('Aucune région pour ce département',
-            style: TextStyle(color: Colors.orange, fontSize: 13)),
-      ]),
-    );
-  }
+  Widget _regionEmpty() => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF1A1D27),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+    ),
+    child: const Row(children: [
+      Icon(Icons.warning_amber_outlined, color: Colors.orange, size: 16),
+      SizedBox(width: 8),
+      Text('Aucune région pour ce département',
+          style: TextStyle(color: Colors.orange, fontSize: 13)),
+    ]),
+  );
 
   Widget _audioBtn({required IconData icon, required String label,
       required Color color, required VoidCallback onPressed}) {
@@ -480,37 +533,32 @@ class _FormScreenState extends State<FormScreen> {
     );
   }
 
-  Widget _audioFileCard() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1D27),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color: const Color(0xFF3ECF8E).withValues(alpha: 0.4)),
+  Widget _audioFileCard() => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFF1A1D27),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xFF3ECF8E).withValues(alpha: 0.4)),
+    ),
+    child: Row(children: [
+      const Icon(Icons.audio_file, color: Color(0xFF3ECF8E)),
+      const SizedBox(width: 10),
+      Expanded(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_audioPath!.split('/').last,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              overflow: TextOverflow.ellipsis),
+          Text(_audioDuration ?? '--:--:--',
+              style: const TextStyle(color: Color(0xFF8A8F9E), fontSize: 11)),
+        ],
+      )),
+      IconButton(
+        icon: const Icon(Icons.close, color: Color(0xFF8A8F9E), size: 18),
+        onPressed: _removeAudio,
       ),
-      child: Row(children: [
-        const Icon(Icons.audio_file, color: Color(0xFF3ECF8E)),
-        const SizedBox(width: 10),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_audioPath!.split('/').last,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                overflow: TextOverflow.ellipsis),
-            Text(_audioDuration ?? '--:--:--',
-                style: const TextStyle(
-                    color: Color(0xFF8A8F9E), fontSize: 11)),
-          ],
-        )),
-        IconButton(
-          icon: const Icon(Icons.close,
-              color: Color(0xFF8A8F9E), size: 18),
-          onPressed: _removeAudio,
-        ),
-      ]),
-    );
-  }
+    ]),
+  );
 
   @override
   void dispose() {

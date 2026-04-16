@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../database/local_database.dart';
-import '../services/resilient_sync_service.dart';
 import '../widgets/network_status_card.dart';
 import '../widgets/progress_bar.dart';
 
@@ -12,10 +10,8 @@ class SyncScreen extends StatefulWidget {
 }
 
 class _SyncScreenState extends State<SyncScreen> {
-  int    _pendingCount = 0;
-  bool   _isOnline     = false;
-  bool   _isSyncing    = false;
-  String _statusMsg    = '';
+  int  _pendingCount = 0;
+  bool _isOnline     = false;
 
   @override
   void initState() {
@@ -24,48 +20,15 @@ class _SyncScreenState extends State<SyncScreen> {
   }
 
   Future<void> _checkStatus() async {
-    final count  = await LocalDatabase.countPending();
-    final online = await ResilientSyncService.isOnline();
-    if (mounted) setState(() { _pendingCount = count; _isOnline = online; });
-  }
-
-  Future<void> _startSync() async {
-    if (!_isOnline) { _snack('Aucune connexion internet', error: true); return; }
-
-    setState(() { _isSyncing = true; _statusMsg = 'Transfert en cours...'; });
-
-    final result = await ResilientSyncService.syncAll(
-      onProgress: (synced, total) {
-        if (mounted) setState(() => _statusMsg = 'Transfert $synced / $total...');
-      },
-    );
-
+    // Compte tous les témoins en attente de transfert
+    final temoins = await LocalDatabase.getAllTemoins();
     if (mounted) {
-      setState(() { _isSyncing = false; _statusMsg = ''; });
-      await _checkStatus();
-      _snack(
-        result.isSuccess
-            ? (result.uploaded > 0
-                ? '${result.uploaded} enregistrement(s) transféré(s) ✓'
-                : 'Aucun enregistrement en attente')
-            : '${result.uploaded} transféré(s) — ${result.failed} échec(s)',
-        success: result.isSuccess,
-        error:   !result.isSuccess,
-      );
+      setState(() {
+        _pendingCount = temoins.length;
+        // TODO : vérifier la connectivité réseau quand FastAPI sera prêt
+        _isOnline = false;
+      });
     }
-  }
-
-  void _snack(String msg,
-      {bool success = false, bool error = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success
-          ? Colors.green.shade600
-          : error ? Colors.red.shade600 : null,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 4),
-    ));
   }
 
   @override
@@ -74,10 +37,6 @@ class _SyncScreenState extends State<SyncScreen> {
       backgroundColor: const Color(0xFF0F1117),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1D27),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.go('/formulaire'),
-        ),
         title: const Text('Transfert cloud',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
@@ -92,11 +51,11 @@ class _SyncScreenState extends State<SyncScreen> {
                 style: TextStyle(color: Colors.white, fontSize: 22,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            const Text('Envoyez les enregistrements locaux vers Supabase',
+            const Text('Envoyez les enregistrements locaux vers le serveur',
                 style: TextStyle(color: Color(0xFF8A8F9E), fontSize: 13)),
             const SizedBox(height: 28),
 
-            // ── NetworkStatusCard ─────────────────────────────────────────
+            // ── Statut réseau ─────────────────────────────────────────────
             NetworkStatusCard(isOnline: _isOnline),
             const SizedBox(height: 16),
 
@@ -104,24 +63,13 @@ class _SyncScreenState extends State<SyncScreen> {
             _pendingCard(),
             const SizedBox(height: 20),
 
-            // ── AnimatedProgressBar ───────────────────────────────────────
-            if (_isSyncing) ...[
-              const AnimatedProgressBar(),
-              const SizedBox(height: 8),
-              Text(_statusMsg,
-                  style: const TextStyle(color: Color(0xFF3ECF8E), fontSize: 12),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-            ],
-
             const Spacer(),
 
-            // ── Bouton transfert ──────────────────────────────────────────
+            // ── Bouton transfert (désactivé jusqu'à FastAPI) ──────────────
             SizedBox(
               height: 56,
               child: ElevatedButton.icon(
-                onPressed: (_isSyncing || !_isOnline || _pendingCount == 0)
-                    ? null : _startSync,
+                onPressed: null, // activé quand FastAPI sera connecté
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3ECF8E),
                   foregroundColor: Colors.black,
@@ -130,14 +78,20 @@ class _SyncScreenState extends State<SyncScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                icon: _isSyncing
-                    ? const SizedBox(width: 20, height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.black))
-                    : const Icon(Icons.cloud_upload_outlined, size: 22),
-                label: Text(
-                  _isSyncing ? 'Transfert en cours...' : 'Envoyer vers le cloud',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                icon: const Icon(Icons.cloud_upload_outlined, size: 22),
+                label: const Text('Envoyer vers le cloud',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // ── Mention en attente ────────────────────────────────────────
+            const Center(
+              child: Text(
+                'Fonctionnalité disponible dès que FastAPI sera connecté',
+                style: TextStyle(color: Color(0xFF3D4155), fontSize: 11),
+                textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 12),
@@ -145,7 +99,8 @@ class _SyncScreenState extends State<SyncScreen> {
             // ── Actualiser ────────────────────────────────────────────────
             TextButton.icon(
               onPressed: _checkStatus,
-              icon:  const Icon(Icons.refresh, color: Color(0xFF8A8F9E), size: 16),
+              icon:  const Icon(Icons.refresh,
+                  color: Color(0xFF8A8F9E), size: 16),
               label: const Text('Actualiser le statut',
                   style: TextStyle(color: Color(0xFF8A8F9E), fontSize: 13)),
             ),

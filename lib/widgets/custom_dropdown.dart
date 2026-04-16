@@ -5,6 +5,7 @@ class CustomDropdown extends StatelessWidget {
   final String?  value;
   final List<Map<String, dynamic>> items;
   final String   displayKey;
+  final String   valueKey;        // clé utilisée comme valeur — défaut 'id'
   final void Function(String?) onChanged;
 
   const CustomDropdown({
@@ -14,6 +15,7 @@ class CustomDropdown extends StatelessWidget {
     required this.items,
     required this.displayKey,
     required this.onChanged,
+    this.valueKey = 'id',         // rétrocompatible avec l'ancien code
   });
 
   @override
@@ -44,7 +46,7 @@ class CustomDropdown extends StatelessWidget {
         ),
       ),
       items: items.map((item) => DropdownMenuItem<String>(
-        value: item['id'] as String,
+        value: item[valueKey] as String,
         child: Text(
           item[displayKey] as String,
           style: const TextStyle(color: Colors.white, fontSize: 14),

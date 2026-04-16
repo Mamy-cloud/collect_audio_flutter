@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'package:record/record.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -46,8 +47,11 @@ class AudioService {
 
   static Future<String> getAudioDuration(String path) async {
     try {
-      await _player.setFilePath(path);
-      final d = _player.duration ?? Duration.zero;
+      final completer = Completer<Duration>();
+      _player.onDurationChanged.first.then((d) => completer.complete(d));
+      await _player.setSourceDeviceFile(path);
+      final d = await completer.future
+          .timeout(const Duration(seconds: 5), onTimeout: () => Duration.zero);
       final h = d.inHours.toString().padLeft(2, '0');
       final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
       final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -58,8 +62,7 @@ class AudioService {
   }
 
   static Future<void> playAudio(String path) async {
-    await _player.setFilePath(path);
-    await _player.play();
+    await _player.play(DeviceFileSource(path));
   }
 
   static Future<void> stopAudio() async => await _player.stop();
