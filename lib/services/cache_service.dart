@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../database/local_database.dart';
+import '../database/local_database.dart';
 
 class CacheService {
   static final _sb = Supabase.instance.client;
@@ -25,7 +25,7 @@ class CacheService {
     try {
       final data = await _sb
           .from('regions_corse')
-          .select('id, name_region')
+          .select('id, name_region, departement_id')
           .order('name_region');
       await LocalDatabase.cacheRegionsCorse(
           List<Map<String, dynamic>>.from(data));

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/local_database.dart';
 import '../models/witness_model.dart';
 import '../services/audio_service.dart';
 import '../services/cache_service.dart';
+import '../services/resilient_sync_service.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/custom_dropdown.dart';
 
@@ -28,31 +30,121 @@ class _FormScreenState extends State<FormScreen> {
   bool     _hasAudio    = false;
   bool     _isSaving    = false;
 
-  List<Map<String, dynamic>> _depts   = [];
-  List<Map<String, dynamic>> _regions = [];
+  // Toutes les données chargées depuis le cache SQLite
+  List<Map<String, dynamic>> _depts          = [];
+  List<Map<String, dynamic>> _allRegions     = [];
+
+  // Régions filtrées selon le département sélectionné
+  List<Map<String, dynamic>> _filteredRegions = [];
 
   @override
   void initState() {
     super.initState();
     _loadOptions();
+    _checkFirstLaunch();
   }
+
+  // ── 1er lancement — demande connexion internet ──────────────────────────────
+
+  Future<void> _checkFirstLaunch() async {
+    final prefs     = await SharedPreferences.getInstance();
+    final isFirst   = prefs.getBool('first_launch') ?? true;
+    final hasCache  = await LocalDatabase.hasOfflineData();
+
+    if (isFirst || !hasCache) {
+      // Attend que le widget soit monté
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showConnectionSnackbar();
+      });
+      await prefs.setBool('first_launch', false);
+    }
+  }
+
+  void _showConnectionSnackbar() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(children: const [
+          Icon(Icons.wifi_outlined, color: Colors.white, size: 18),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Connectez-vous à internet pour charger les départements et régions',
+              style: TextStyle(fontSize: 13),
+            ),
+          ),
+        ]),
+        backgroundColor: const Color(0xFF1A1D27),
+        behavior:        SnackBarBehavior.floating,
+        duration:        const Duration(seconds: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Color(0xFF3ECF8E), width: 1),
+        ),
+        action: SnackBarAction(
+          label:     'OK',
+          textColor: const Color(0xFF3ECF8E),
+          onPressed: () {},
+        ),
+      ),
+    );
+  }
+
+  // ── Chargement options depuis cache SQLite ──────────────────────────────────
 
   Future<void> _loadOptions() async {
     final d = await CacheService.getDepartements();
     final r = await CacheService.getRegionsCorse();
-    if (mounted) setState(() { _depts = d; _regions = r; });
+    if (mounted) {
+      setState(() {
+        _depts      = d;
+        _allRegions = r;
+      });
+    }
   }
+
+  // ── Filtre les régions selon le département sélectionné ────────────────────
+
+  void _onDeptChanged(String? deptId) {
+    setState(() {
+      _deptId   = deptId;
+      _regionId = null; // reset la région
+
+      if (deptId == null) {
+        _filteredRegions = [];
+      } else {
+        _filteredRegions = _allRegions
+            .where((r) => r['departement_id'] == deptId)
+            .toList();
+      }
+    });
+  }
+
+  // ── Date de naissance ──────────────────────────────────────────────────────
 
   Future<void> _pickDate() async {
     final date = await showDatePicker(
-      context: context, initialDate: DateTime(1950),
-      firstDate: DateTime(1900), lastDate: DateTime.now(),
+      context:     context,
+      initialDate: DateTime(1950),
+      firstDate:   DateTime(1900),
+      lastDate:    DateTime.now(),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary:   Color(0xFF3ECF8E),
+            surface:   Color(0xFF1A1D27),
+          ),
+        ),
+        child: child!,
+      ),
     );
     if (date != null) {
       _dateCtrl.text =
-          '${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}';
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
   }
+
+  // ── Audio ──────────────────────────────────────────────────────────────────
 
   Future<void> _toggleRecording() async {
     if (_isRecording) {
@@ -60,8 +152,10 @@ class _FormScreenState extends State<FormScreen> {
       if (path != null) {
         final dur = await AudioService.getAudioDuration(path);
         setState(() {
-          _audioPath = path; _audioDuration = dur;
-          _isRecording = false; _hasAudio = true;
+          _audioPath    = path;
+          _audioDuration = dur;
+          _isRecording  = false;
+          _hasAudio     = true;
         });
       }
     } else {
@@ -76,12 +170,19 @@ class _FormScreenState extends State<FormScreen> {
     final path = await AudioService.pickAudioFile();
     if (path != null) {
       final dur = await AudioService.getAudioDuration(path);
-      setState(() { _audioPath = path; _audioDuration = dur; _hasAudio = true; });
+      setState(() {
+        _audioPath    = path;
+        _audioDuration = dur;
+        _hasAudio     = true;
+      });
     }
   }
 
-  void _removeAudio() =>
-      setState(() { _audioPath = null; _audioDuration = null; _hasAudio = false; });
+  void _removeAudio() => setState(() {
+    _audioPath = null; _audioDuration = null; _hasAudio = false;
+  });
+
+  // ── Sauvegarde ─────────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -104,6 +205,11 @@ class _FormScreenState extends State<FormScreen> {
         createdAt:     DateTime.now().toIso8601String(),
       ));
       _snack('Sauvegardé localement ✓', success: true);
+
+      // Tente une sync immédiate si en ligne
+      final online = await ResilientSyncService.isOnline();
+      if (online) ResilientSyncService.syncAll();
+
       _reset();
     } catch (e) {
       _snack('Erreur : $e');
@@ -115,20 +221,26 @@ class _FormScreenState extends State<FormScreen> {
   void _reset() {
     _nomCtrl.clear(); _prenomCtrl.clear(); _dateCtrl.clear();
     setState(() {
-      _deptId = null; _regionId = null;
-      _audioPath = null; _audioDuration = null;
-      _acceptRgpd = false; _hasAudio = false;
+      _deptId          = null;
+      _regionId        = null;
+      _filteredRegions = [];
+      _audioPath       = null;
+      _audioDuration   = null;
+      _acceptRgpd      = false;
+      _hasAudio        = false;
     });
   }
 
   void _snack(String msg, {bool success = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
+      content:         Text(msg),
       backgroundColor: success ? Colors.green.shade600 : Colors.red.shade600,
-      behavior: SnackBarBehavior.floating,
+      behavior:        SnackBarBehavior.floating,
     ));
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +266,7 @@ class _FormScreenState extends State<FormScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
 
-              // ── Nom & Prénom — CustomTextField ────────────────────────────
+              // ── Nom & Prénom ──────────────────────────────────────────────
               Row(children: [
                 Expanded(child: CustomTextField(
                   controller: _nomCtrl, label: 'Nom *', hint: 'ex. Ferracci')),
@@ -164,30 +276,41 @@ class _FormScreenState extends State<FormScreen> {
               ]),
               const SizedBox(height: 16),
 
-              // ── Date — CustomTextField readonly ───────────────────────────
+              // ── Date de naissance ─────────────────────────────────────────
               CustomTextField(
                 controller: _dateCtrl,
-                label: 'Date de naissance *', hint: 'Sélectionner',
-                readOnly: true, onTap: _pickDate,
-                suffix: const Icon(Icons.calendar_today_outlined,
+                label:    'Date de naissance *',
+                hint:     'Sélectionner',
+                readOnly: true,
+                onTap:    _pickDate,
+                suffix:   const Icon(Icons.calendar_today_outlined,
                     color: Color(0xFF3ECF8E), size: 18),
               ),
               const SizedBox(height: 16),
 
-              // ── Département — CustomDropdown ──────────────────────────────
+              // ── Département ───────────────────────────────────────────────
               CustomDropdown(
-                label: 'Département *', value: _deptId,
-                items: _depts, displayKey: 'name_departement',
-                onChanged: (v) => setState(() => _deptId = v),
+                label:      'Département *',
+                value:      _deptId,
+                items:      _depts,
+                displayKey: 'name_departement',
+                onChanged:  _onDeptChanged,   // ← filtre les régions
               ),
               const SizedBox(height: 16),
 
-              // ── Région — CustomDropdown ───────────────────────────────────
-              CustomDropdown(
-                label: 'Région *', value: _regionId,
-                items: _regions, displayKey: 'name_region',
-                onChanged: (v) => setState(() => _regionId = v),
-              ),
+              // ── Région — filtrée selon le département ─────────────────────
+              if (_deptId == null)
+                _regionPlaceholder()
+              else if (_filteredRegions.isEmpty)
+                _regionEmpty()
+              else
+                CustomDropdown(
+                  label:      'Région *',
+                  value:      _regionId,
+                  items:      _filteredRegions,
+                  displayKey: 'name_region',
+                  onChanged:  (v) => setState(() => _regionId = v),
+                ),
               const SizedBox(height: 24),
 
               // ── Audio ─────────────────────────────────────────────────────
@@ -238,8 +361,8 @@ class _FormScreenState extends State<FormScreen> {
                         : const Color(0xFF2D3142)),
                 ),
                 child: CheckboxListTile(
-                  value: _acceptRgpd,
-                  onChanged: (v) => setState(() => _acceptRgpd = v ?? false),
+                  value:       _acceptRgpd,
+                  onChanged:   (v) => setState(() => _acceptRgpd = v ?? false),
                   activeColor: const Color(0xFF3ECF8E),
                   checkColor:  Colors.black,
                   title: const Text(
@@ -303,6 +426,45 @@ class _FormScreenState extends State<FormScreen> {
     );
   }
 
+  // ── Widgets locaux ──────────────────────────────────────────────────────────
+
+  // Placeholder région quand aucun département sélectionné
+  Widget _regionPlaceholder() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color:        const Color(0xFF1A1D27),
+        borderRadius: BorderRadius.circular(8),
+        border:       Border.all(color: const Color(0xFF2D3142)),
+      ),
+      child: const Row(children: [
+        Icon(Icons.info_outline, color: Color(0xFF3D4155), size: 16),
+        SizedBox(width: 8),
+        Text('Sélectionnez d\'abord un département',
+            style: TextStyle(color: Color(0xFF3D4155), fontSize: 13)),
+      ]),
+    );
+  }
+
+  // Message si aucune région trouvée pour ce département
+  Widget _regionEmpty() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color:        const Color(0xFF1A1D27),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+            color: Colors.orange.withValues(alpha: 0.4)),
+      ),
+      child: const Row(children: [
+        Icon(Icons.warning_amber_outlined, color: Colors.orange, size: 16),
+        SizedBox(width: 8),
+        Text('Aucune région pour ce département',
+            style: TextStyle(color: Colors.orange, fontSize: 13)),
+      ]),
+    );
+  }
+
   Widget _audioBtn({required IconData icon, required String label,
       required Color color, required VoidCallback onPressed}) {
     return OutlinedButton.icon(
@@ -313,7 +475,7 @@ class _FormScreenState extends State<FormScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      icon: Icon(icon, size: 18),
+      icon:  Icon(icon, size: 18),
       label: Text(label, style: const TextStyle(fontSize: 13)),
     );
   }
@@ -324,7 +486,8 @@ class _FormScreenState extends State<FormScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1D27),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF3ECF8E).withValues(alpha: 0.4)),
+        border: Border.all(
+            color: const Color(0xFF3ECF8E).withValues(alpha: 0.4)),
       ),
       child: Row(children: [
         const Icon(Icons.audio_file, color: Color(0xFF3ECF8E)),
@@ -336,11 +499,13 @@ class _FormScreenState extends State<FormScreen> {
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 overflow: TextOverflow.ellipsis),
             Text(_audioDuration ?? '--:--:--',
-                style: const TextStyle(color: Color(0xFF8A8F9E), fontSize: 11)),
+                style: const TextStyle(
+                    color: Color(0xFF8A8F9E), fontSize: 11)),
           ],
         )),
         IconButton(
-          icon: const Icon(Icons.close, color: Color(0xFF8A8F9E), size: 18),
+          icon: const Icon(Icons.close,
+              color: Color(0xFF8A8F9E), size: 18),
           onPressed: _removeAudio,
         ),
       ]),

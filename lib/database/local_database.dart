@@ -18,7 +18,7 @@ class LocalDatabase {
   static Future<void> init() async {
     _db = await openDatabase(
       join(await getDatabasesPath(), 'conta.db'),
-      version:   2,            // ✅ incrémenté de 1 → 2
+      version:   3,            // ✅ incrémenté de 1 → 2
       onCreate:  _onCreate,
       onUpgrade: _onUpgrade,   // ✅ migration pour les appareils existants
     );
@@ -62,8 +62,9 @@ class LocalDatabase {
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS cache_regions_corse (
-        id          TEXT PRIMARY KEY,
-        name_region TEXT NOT NULL
+        id             TEXT PRIMARY KEY,
+        name_region    TEXT NOT NULL,
+        departement_id TEXT
       )
     ''');
 
@@ -81,20 +82,21 @@ class LocalDatabase {
       Database db, int oldVersion, int newVersion) async {
     // v1 → v2 : supprime age, ajoute date_naissance
     if (oldVersion < 2) {
-      // Supprime l'ancienne colonne age si elle existe
       try {
         await db.execute('ALTER TABLE witnesses DROP COLUMN age');
-      } catch (_) {
-        // age n'existait pas → pas de problème
-      }
-
-      // Ajoute date_naissance si elle n'existe pas
+      } catch (_) {}
       try {
         await db.execute(
             "ALTER TABLE witnesses ADD COLUMN date_naissance TEXT NOT NULL DEFAULT ''");
-      } catch (_) {
-        // date_naissance existait déjà → pas de problème
-      }
+      } catch (_) {}
+    }
+
+    // v2 → v3 : ajoute departement_id dans cache_regions_corse
+    if (oldVersion < 3) {
+      try {
+        await db.execute(
+            'ALTER TABLE cache_regions_corse ADD COLUMN departement_id TEXT');
+      } catch (_) {}
     }
   }
 
@@ -185,7 +187,7 @@ class LocalDatabase {
     b.delete('cache_regions_corse');
     for (final r in rows) {
       b.insert('cache_regions_corse',
-          {'id': r['id'], 'name_region': r['name_region']},
+          {'id': r['id'], 'name_region': r['name_region'], 'departement_id': r['departement_id']},
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
     b.insert('cache_meta',
