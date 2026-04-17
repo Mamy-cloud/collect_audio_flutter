@@ -24,41 +24,43 @@ class _RecordsScreenState extends State<RecordsScreen> {
     final data = await LocalDatabase.getAllTemoins();
     if (!mounted) return;
     setState(() {
-      _temoins   = data;
+      // Copie modifiable — SQLite retourne une liste read-only
+      _temoins   = List<Map<String, dynamic>>.from(data);
       _isLoading = false;
     });
   }
 
-  Future<void> _deleteTemoin(Map<String, dynamic> temoin) async {
-    // Confirmation
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
+  void _confirmDelete(BuildContext ctx, Map<String, dynamic> temoin) {
+    showDialog<void>(
+      context: ctx,
+      barrierDismissible: true,
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1D27),
         title: const Text('Supprimer', style: TextStyle(color: Colors.white)),
         content: const Text(
-            'Supprimer ce témoin et son fichier audio localement ?',
+            'Supprimer ce témoin et son fichier audio ?',
             style: TextStyle(color: Color(0xFF8A8F9E))),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
             child: const Text('Annuler',
                 style: TextStyle(color: Color(0xFF8A8F9E))),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              _doDelete(temoin);
+            },
             child: const Text('Supprimer',
                 style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
+  }
 
-    // Annulé ou widget démonté → on ne fait rien
-    if (confirm != true) return;
-    if (!mounted) return;
-
-    // 1. Supprimer le fichier audio local s'il existe
+  Future<void> _doDelete(Map<String, dynamic> temoin) async {
+    // 1. Supprimer le fichier audio local
     final audioPath = temoin['chemin_audio'] as String?;
     if (audioPath != null) {
       try {
@@ -70,11 +72,12 @@ class _RecordsScreenState extends State<RecordsScreen> {
     // 2. Supprimer la ligne SQLite
     await LocalDatabase.deleteTemoin(temoin['id'] as int);
 
-    // 3. Retirer l'élément de la liste en mémoire — pas de rechargement,
-    //    pas de navigation, l'utilisateur reste sur l'onglet
+    // 3. Retirer de la liste modifiable en mémoire
     if (!mounted) return;
     setState(() {
-      _temoins.removeWhere((t) => t['id'] == temoin['id']);
+      _temoins = _temoins
+          .where((t) => t['id'] != temoin['id'])
+          .toList();
     });
   }
 
@@ -106,9 +109,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _temoins.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (_, i) => _TemoinCard(
+                    itemBuilder: (ctx, i) => _TemoinCard(
                       temoin:   _temoins[i],
-                      onDelete: () => _deleteTemoin(_temoins[i]),
+                      onDelete: () => _confirmDelete(ctx, _temoins[i]),
                     ),
                   ),
                 ),
@@ -131,8 +134,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
     ),
   );
 }
-
-// ── Card témoin ───────────────────────────────────────────────────────────────
 
 class _TemoinCard extends StatelessWidget {
   final Map<String, dynamic> temoin;
@@ -184,7 +185,7 @@ class _TemoinCard extends StatelessWidget {
                 icon: const Icon(Icons.delete_outline,
                     color: Colors.redAccent, size: 20),
                 onPressed: onDelete,
-                tooltip: 'Supprimer le témoin et l\'audio',
+                tooltip: 'Supprimer',
               ),
             ]),
           ),
@@ -202,7 +203,6 @@ class _TemoinCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 _infoRow(Icons.access_time_outlined, date),
                 const SizedBox(height: 8),
-
                 if (hasAudio)
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -243,7 +243,6 @@ class _TemoinCard extends StatelessWidget {
                     const Text('Aucun audio',
                         style: TextStyle(color: Color(0xFF3D4155), fontSize: 12)),
                   ]),
-
                 const SizedBox(height: 8),
                 Row(children: [
                   Icon(
@@ -257,7 +256,9 @@ class _TemoinCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    temoin['accept_rgpd'] == 1 ? 'RGPD accepté' : 'RGPD non accepté',
+                    temoin['accept_rgpd'] == 1
+                        ? 'RGPD accepté'
+                        : 'RGPD non accepté',
                     style: TextStyle(
                       fontSize: 11,
                       color: temoin['accept_rgpd'] == 1
