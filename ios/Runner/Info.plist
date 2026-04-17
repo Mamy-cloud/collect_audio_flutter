@@ -2,6 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	
+    <!-- ... autres clés existantes ... -->
+
+    <!-- Galerie photos -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Accès à la galerie pour ajouter une photo du témoin</string>
+
+    <!-- Caméra -->
+    <key>NSCameraUsageDescription</key>
+    <string>Accès à la caméra pour prendre une photo du témoin</string>
+
+    <!-- Microphone (si vous enregistrez de l'audio) -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Accès au microphone pour enregistrer le témoignage</string>
+
+    <!-- Sauvegarde dans la galerie -->
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Enregistrer des photos dans la galerie</string>
+
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

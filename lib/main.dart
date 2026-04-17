@@ -1,31 +1,27 @@
 import 'package:flutter/material.dart';
-import 'database/local_database.dart';
-import 'router.dart';
+import './database/create_table/create_table_temoin.dart';
+import 'routers/router.dart';
+import 'widgets/global/app_styles.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await LocalDatabase.init();
+  // Init SQLite — crée les tables au premier lancement
+  await CreateTableTemoin.init();
 
-  runApp(const ContaApp());
+  runApp(const App());
 }
 
-class ContaApp extends StatelessWidget {
-  const ContaApp({super.key});
+class App extends StatelessWidget {
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Conta Mobile',
+      title:                     'Mon Application',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.dark(
-          primary: const Color(0xFF3ECF8E),
-          surface: const Color(0xFF0F1117),
-        ),
-        useMaterial3: true,
-      ),
-      routerConfig: router,
+      theme:                     buildAppTheme(),
+      routerConfig:              router,
     );
   }
 }

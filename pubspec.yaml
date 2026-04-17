@@ -1,5 +1,5 @@
-name: conta_mobile
-description: Conta Mobile — Enregistrement de témoins
+name: mon_application
+description: Nouvelle application Flutter
 
 publish_to: 'none'
 version: 1.0.0+1
@@ -14,25 +14,23 @@ dependencies:
   # Navigation
   go_router: ^14.0.0
 
-  # Base de données locale
+  # Base de données locale — sqflite natif Android/iOS
   sqflite: ^2.3.0
   path: ^1.9.0
 
-  # Appels API REST vers FastAPI
-  http: ^1.2.0
+  # UUID pour les clés primaires
+  uuid: ^4.4.0
 
-  # Audio — flutter_sound remplace record
-  flutter_sound: ^9.2.13
-  audioplayers: ^6.0.0
-  file_picker: ^8.0.0
+  # Image
+  image_picker:       ^1.0.0
   permission_handler: ^11.0.0
-  path_provider: ^2.1.0
+  path_provider:      ^2.1.0
+
+  # Appels API REST
+  http: ^1.2.0
 
   # Préférences locales
   shared_preferences: ^2.2.0
-
-  # UUID (optionnel)
-  uuid: ^4.4.0
 
 dev_dependencies:
   flutter_test:
@@ -42,4 +40,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
+    - assets/img/
