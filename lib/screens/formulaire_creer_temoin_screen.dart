@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../database/conserve_data/conserve_data_to_sqlite.dart';
 import '../widgets/global/app_styles.dart';
 import '../widgets/screens_widgets/formulaire_creer_temoin_widgets.dart';
 
@@ -23,6 +24,7 @@ class _FormulaireCreerTemoinScreenState
   String? _deptId;
   String? _regionId;
   String? _imgPath;
+  bool    _isLoading = false;
 
   void _onDeptChanged(String? id) {
     setState(() { _deptId = id; _regionId = null; });
@@ -50,6 +52,8 @@ class _FormulaireCreerTemoinScreenState
     }
   }
 
+  // ── Android/iOS : image_picker ────────────────────────────────────────────
+
   Future<void> _pickImage() async {
     await Permission.photos.request();
     final picker = ImagePicker();
@@ -68,7 +72,7 @@ class _FormulaireCreerTemoinScreenState
 
   void _removeImage() => setState(() => _imgPath = null);
 
-  void _submit() {
+  Future<void> _submit() async {
     final nom    = _nomCtrl.text.trim();
     final prenom = _prenomCtrl.text.trim();
 
@@ -82,17 +86,34 @@ class _FormulaireCreerTemoinScreenState
       _snack('Sélectionnez une région'); return;
     }
 
-    Navigator.of(context).pop();
+    setState(() => _isLoading = true);
 
-    context.go('/notification_add_temoin', extra: {
-      'nom':            nom,
-      'prenom':         prenom,
-      'date_naissance': _dateCtrl.text.trim().isEmpty
-                            ? null : _dateCtrl.text.trim(),
-      'departement':    _deptId,
-      'region':         _regionId,
-      'img_temoin':     _imgPath,
-    });
+    try {
+      await ConserveDataToSqlite.insertInfoPersoTemoin(
+        nom:           nom,
+        prenom:        prenom,
+        dateNaissance: _dateCtrl.text.trim().isEmpty
+                           ? null : _dateCtrl.text.trim(),
+        departement:   _deptId,
+        region:        _regionId,
+        imgTemoinPath: _imgPath,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      context.go('/notification_add_temoin', extra: {
+        'success': true,
+        'message': null,
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      Navigator.of(context).pop();
+      context.go('/notification_add_temoin', extra: {
+        'success': false,
+        'message': e.toString(),
+      });
+    }
   }
 
   void _snack(String msg) {
@@ -183,7 +204,10 @@ class _FormulaireCreerTemoinScreenState
             ),
             const SizedBox(height: 28),
 
-            AjouterTemoinButton(onPressed: _submit),
+            AjouterTemoinButton(
+              onPressed:  _submit,
+              isLoading:  _isLoading,
+            ),
           ],
         ),
       ),
@@ -211,12 +235,16 @@ class _FormulaireCreerTemoinScreenState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(child: _imgBtn(
-                icon: Icons.camera_alt_outlined,
-                label: 'Caméra', onPressed: _takePhoto)),
+                icon:      Icons.camera_alt_outlined,
+                label:     'Caméra',
+                onPressed: _takePhoto,
+              )),
               const SizedBox(width: 12),
               Expanded(child: _imgBtn(
-                icon: Icons.photo_library_outlined,
-                label: 'Galerie', onPressed: _pickImage)),
+                icon:      Icons.photo_library_outlined,
+                label:     'Galerie',
+                onPressed: _pickImage,
+              )),
             ],
           ),
         ),

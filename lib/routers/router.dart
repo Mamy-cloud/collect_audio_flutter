@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/login_screen.dart';
 import '../screens/list_temoin_screen.dart';
@@ -22,9 +21,13 @@ final router = GoRouter(
         GoRoute(
           path: '/notification_add_temoin',
           builder: (context, state) {
-            final temoinData =
-                state.extra as Map<String, dynamic>;
-            return NotificationAddTemoinScreen(temoinData: temoinData);
+            final extra   = state.extra as Map<String, dynamic>;
+            final success = extra['success'] as bool;
+            final message = extra['message'] as String?;
+            return NotificationAddTemoinScreen(
+              success:      success,
+              errorMessage: message,
+            );
           },
         ),
       ],

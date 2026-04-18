@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../database/conserve_data/conserve_data_to_sqlite.dart';
-import '../widgets/global/app_styles.dart';
 import '../../../widgets/screens_widgets/display_data_temoin_widget.dart';
 
 class DisplayDataTemoinScreen extends StatefulWidget {

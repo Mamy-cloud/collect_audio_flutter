@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../database/research_data/research_temoin.dart';
 import '../widgets/global/app_styles.dart';
 import '../widgets/screens_widgets/list_temoin_widgets.dart';
-import 'display_data_temoin_screen.dart';
+import '../widgets/screens_widgets/display_data_temoin_widget.dart';
 import 'formulaire_creer_temoin_screen.dart';
 
 class ListTemoinScreen extends StatefulWidget {
@@ -13,18 +14,39 @@ class ListTemoinScreen extends StatefulWidget {
 
 class _ListTemoinScreenState extends State<ListTemoinScreen> {
   final _searchCtrl = TextEditingController();
-  String _query     = '';
 
-  // Clé pour rafraîchir DisplayDataTemoinScreen après ajout
-  final GlobalKey<State> _displayKey = GlobalKey();
+  List<Map<String, dynamic>> _temoins   = [];
+  bool                       _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTemoins('');
+    // Recherche au fur et à mesure de la saisie
+    _searchCtrl.addListener(() => _loadTemoins(_searchCtrl.text));
+  }
+
+  Future<void> _loadTemoins(String query) async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    final data = await ResearchTemoin.search(query);
+    if (!mounted) return;
+    setState(() {
+      _temoins   = data;
+      _isLoading = false;
+    });
+  }
 
   void _ouvrirFormulaire() {
     showModalBottomSheet(
-      context:             context,
-      isScrollControlled:  true,
-      backgroundColor:     Colors.transparent,
+      context:            context,
+      isScrollControlled: true,
+      backgroundColor:    Colors.transparent,
       builder: (_) => const FormulaireCreerTemoinScreen(),
-    );
+    ).then((_) {
+      // Rafraîchir la liste après fermeture du formulaire
+      _loadTemoins(_searchCtrl.text);
+    });
   }
 
   @override
@@ -44,17 +66,31 @@ class _ListTemoinScreenState extends State<ListTemoinScreen> {
 
               const SizedBox(height: 20),
 
-              // ── Recherche ──────────────────────────────────────────────
+              // ── Barre de recherche ─────────────────────────────────────
               SearchField(
                 controller: _searchCtrl,
-                onChanged:  (v) => setState(() => _query = v),
+                onChanged:  (_) {},  // géré par le listener
               ),
 
               const SizedBox(height: 16),
 
-              // ── Liste des témoins depuis SQLite ────────────────────────
-              const Expanded(
-                child: DisplayDataTemoinScreen(),
+              // ── Liste filtrée en temps réel ────────────────────────────
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: Colors.white))
+                    : _temoins.isEmpty
+                        ? const EmptyTemoinState()
+                        : RefreshIndicator(
+                            color:     Colors.white,
+                            onRefresh: () => _loadTemoins(_searchCtrl.text),
+                            child: ListView.builder(
+                              padding:     const EdgeInsets.only(top: 4),
+                              itemCount:   _temoins.length,
+                              itemBuilder: (_, i) =>
+                                  TemoinCard(temoin: _temoins[i]),
+                            ),
+                          ),
               ),
             ],
           ),

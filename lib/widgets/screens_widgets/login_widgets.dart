@@ -8,7 +8,7 @@ class LoginTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text('Accueil', style: AppTextStyles.headline);
+    return const Text('', style: AppTextStyles.headline);
   }
 }
 
@@ -20,7 +20,7 @@ class LoginHeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height * 0.40;
+    final height = MediaQuery.of(context).size.height * 0.30;
     return SizedBox(
       height: height,
       child: Image.asset(

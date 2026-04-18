@@ -21,7 +21,7 @@ dependencies:
   # UUID pour les clés primaires
   uuid: ^4.4.0
 
-  # Image
+  # Image — image_picker natif Android/iOS
   image_picker:       ^1.0.0
   permission_handler: ^11.0.0
   path_provider:      ^2.1.0

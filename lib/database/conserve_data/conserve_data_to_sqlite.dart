@@ -9,13 +9,9 @@ class ConserveDataToSqlite {
 
   // ── Copie l'image dans le dossier privé de l'app ──────────────────────────
 
-  /// Copie le fichier image source vers le dossier documents de l'app.
-  /// Retourne le chemin de destination.
   static Future<String> _copyImageToAppDir(String sourcePath) async {
     final Directory appDir;
 
-    // Linux → getApplicationDocumentsDirectory
-    // Android/iOS → getApplicationSupportDirectory
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
       appDir = await getApplicationDocumentsDirectory();
     } else {
@@ -40,11 +36,11 @@ class ConserveDataToSqlite {
     String? dateNaissance,
     String? departement,
     String? region,
-    String? imgTemoinPath,     // chemin temporaire de l'image choisie
+    String? imgTemoinPath,
   }) async {
+
     final id = _uuid.v4();
 
-    // Si une image est fournie, on la copie dans le dossier privé de l'app
     String? imgDestPath;
     if (imgTemoinPath != null) {
       imgDestPath = await _copyImageToAppDir(imgTemoinPath);
@@ -57,7 +53,7 @@ class ConserveDataToSqlite {
       'date_naissance': dateNaissance,
       'departement':    departement,
       'region':         region,
-      'img_temoin':     imgDestPath,    // chemin permanent stocké
+      'img_temoin':     imgDestPath,
       'date_creation':  DateTime.now().toIso8601String(),
     };
 
@@ -90,7 +86,6 @@ class ConserveDataToSqlite {
   // ── DELETE ────────────────────────────────────────────────────────────────
 
   static Future<void> deleteInfoPersoTemoin(String id) async {
-    // Récupère le chemin de l'image pour la supprimer aussi
     final temoin = await getInfoPersoTemoinById(id);
     if (temoin != null && temoin['img_temoin'] != null) {
       final file = File(temoin['img_temoin'] as String);
