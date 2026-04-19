@@ -16,7 +16,7 @@ class TemoinCard extends StatelessWidget {
     final imgPath = temoin['img_temoin'] as String?;
 
     return GestureDetector(
-      onTap: () => context.push('/list_collect_data', extra: temoin),
+      onTap: () => context.push('/save_local_detail', extra: temoin),
       child: Container(
         margin:     const EdgeInsets.only(bottom: 12),
         padding:    const EdgeInsets.all(14),
@@ -27,12 +27,10 @@ class TemoinCard extends StatelessWidget {
         ),
         child: Row(children: [
 
-          // ── Avatar / Image ────────────────────────────────────────────
           _TemoinAvatar(imgPath: imgPath, nom: nom, prenom: prenom),
 
           const SizedBox(width: 14),
 
-          // ── Nom & Prénom ──────────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +56,6 @@ class TemoinCard extends StatelessWidget {
             ),
           ),
 
-          // ── Flèche ────────────────────────────────────────────────────
           const Icon(Icons.chevron_right,
               color: AppColors.textMuted, size: 20),
         ]),
