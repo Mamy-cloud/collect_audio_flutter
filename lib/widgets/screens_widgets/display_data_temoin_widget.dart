@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../global/app_styles.dart';
 
 // ── Card témoin avec image, nom, prénom ───────────────────────────────────────
@@ -10,60 +11,63 @@ class TemoinCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nom    = temoin['nom']    as String? ?? '';
-    final prenom = temoin['prenom'] as String? ?? '';
+    final nom     = temoin['nom']    as String? ?? '';
+    final prenom  = temoin['prenom'] as String? ?? '';
     final imgPath = temoin['img_temoin'] as String?;
 
-    return Container(
-      margin:     const EdgeInsets.only(bottom: 12),
-      padding:    const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color:        AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border:       Border.all(color: const Color(0xFF2A2A2A)),
-      ),
-      child: Row(children: [
-
-        // ── Avatar / Image ──────────────────────────────────────────────
-        _TemoinAvatar(imgPath: imgPath, nom: nom, prenom: prenom),
-
-        const SizedBox(width: 14),
-
-        // ── Nom & Prénom ────────────────────────────────────────────────
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                prenom.isNotEmpty ? prenom : '—',
-                style: const TextStyle(
-                  color:      AppColors.textMuted,
-                  fontSize:   12,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                nom.isNotEmpty ? nom : 'Sans nom',
-                style: const TextStyle(
-                  color:      AppColors.textPrimary,
-                  fontSize:   15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+    return GestureDetector(
+      onTap: () => context.push('/list_collect_data', extra: temoin),
+      child: Container(
+        margin:     const EdgeInsets.only(bottom: 12),
+        padding:    const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color:        AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border:       Border.all(color: const Color(0xFF2A2A2A)),
         ),
+        child: Row(children: [
 
-        // ── Flèche ──────────────────────────────────────────────────────
-        const Icon(Icons.chevron_right,
-            color: AppColors.textMuted, size: 20),
-      ]),
+          // ── Avatar / Image ────────────────────────────────────────────
+          _TemoinAvatar(imgPath: imgPath, nom: nom, prenom: prenom),
+
+          const SizedBox(width: 14),
+
+          // ── Nom & Prénom ──────────────────────────────────────────────
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prenom.isNotEmpty ? prenom : '—',
+                  style: const TextStyle(
+                    color:      AppColors.textMuted,
+                    fontSize:   12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  nom.isNotEmpty ? nom : 'Sans nom',
+                  style: const TextStyle(
+                    color:      AppColors.textPrimary,
+                    fontSize:   15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Flèche ────────────────────────────────────────────────────
+          const Icon(Icons.chevron_right,
+              color: AppColors.textMuted, size: 20),
+        ]),
+      ),
     );
   }
 }
 
-// ── Avatar ─────────────────────────────────────────────────────────────────
+// ── Avatar ────────────────────────────────────────────────────────────────────
 
 class _TemoinAvatar extends StatelessWidget {
   final String? imgPath;
@@ -84,7 +88,6 @@ class _TemoinAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Image locale disponible
     if (imgPath != null && File(imgPath!).existsSync()) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -96,7 +99,6 @@ class _TemoinAvatar extends StatelessWidget {
       );
     }
 
-    // Fallback : cercle avec initiales
     return Container(
       width: 48, height: 48,
       decoration: BoxDecoration(

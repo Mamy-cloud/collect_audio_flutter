@@ -128,7 +128,7 @@ class GuestModeLink extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: const Text('Mode invité', style: AppTextStyles.guestLink),
+      child: const Text('', style: AppTextStyles.guestLink),
     );
   }
 }

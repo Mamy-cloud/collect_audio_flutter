@@ -53,8 +53,8 @@ const List<Map<String, dynamic>> kRegions = [
   {'id': 'reg_2B_08', 'departement_id': 'dept_2B', 'nom': 'Nebbio — Saint-Florent'},
   {'id': 'reg_2B_09', 'departement_id': 'dept_2B', 'nom': 'Nebbio — Oletta'},
   {'id': 'reg_2B_10', 'departement_id': 'dept_2B', 'nom': 'Nebbio — Murato'},
-  {'id': 'reg_2B_11', 'departement_id': 'dept_2B', 'nom': 'Conca d\'Oro — San-Martino-di-Lota'},
-  {'id': 'reg_2B_12', 'departement_id': 'dept_2B', 'nom': 'Conca d\'Oro — Ville-di-Pietrabugno'},
+  {'id': 'reg_2B_11', 'departement_id': 'dept_2B', 'nom': "Conca d'Oro — San-Martino-di-Lota"},
+  {'id': 'reg_2B_12', 'departement_id': 'dept_2B', 'nom': "Conca d'Oro — Ville-di-Pietrabugno"},
   {'id': 'reg_2B_13', 'departement_id': 'dept_2B', 'nom': 'Casinca — Vescovato'},
   {'id': 'reg_2B_14', 'departement_id': 'dept_2B', 'nom': 'Casinca — Penta-di-Casinca'},
   {'id': 'reg_2B_15', 'departement_id': 'dept_2B', 'nom': 'Casinca — Venzolasca'},
@@ -74,7 +74,7 @@ const List<Map<String, dynamic>> kRegions = [
   {'id': 'reg_2B_29', 'departement_id': 'dept_2B', 'nom': 'Bozio — Bustanico'},
   {'id': 'reg_2B_30', 'departement_id': 'dept_2B', 'nom': 'Bozio — Mazzola'},
   {'id': 'reg_2B_31', 'departement_id': 'dept_2B', 'nom': 'Balagne — Calvi'},
-  {'id': 'reg_2B_32', 'departement_id': 'dept_2B', 'nom': 'Balagne — L\'Île-Rousse'},
+  {'id': 'reg_2B_32', 'departement_id': 'dept_2B', 'nom': "Balagne — L'Île-Rousse"},
   {'id': 'reg_2B_33', 'departement_id': 'dept_2B', 'nom': 'Balagne — Belgodère'},
   {'id': 'reg_2B_34', 'departement_id': 'dept_2B', 'nom': 'Balagne — Pigna'},
   {'id': 'reg_2B_35', 'departement_id': 'dept_2B', 'nom': 'Ostriconi — Pietralba'},
@@ -119,8 +119,8 @@ class FormulaireTextField extends StatelessWidget {
 // ── Dropdown département ──────────────────────────────────────────────────────
 
 class DepartementDropdown extends StatelessWidget {
-  final String?                    value;
-  final ValueChanged<String?>      onChanged;
+  final String?               value;
+  final ValueChanged<String?> onChanged;
 
   const DepartementDropdown({
     super.key,
@@ -131,17 +131,15 @@ class DepartementDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      initialValue:  value,
       onChanged:     onChanged,
       dropdownColor: AppColors.surface,
       style:         AppTextStyles.input,
-      icon: const Icon(Icons.keyboard_arrow_down,
-          color: AppColors.textMuted),
+      icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
       decoration: AppInputDecoration.of('Département'),
       items: kDepartements.map((d) => DropdownMenuItem<String>(
         value: d['id'] as String,
-        child: Text(d['nom'] as String,
-            style: AppTextStyles.input),
+        child: Text(d['nom'] as String, style: AppTextStyles.input),
       )).toList(),
     );
   }
@@ -150,9 +148,9 @@ class DepartementDropdown extends StatelessWidget {
 // ── Dropdown région ───────────────────────────────────────────────────────────
 
 class RegionDropdown extends StatelessWidget {
-  final String?                    value;
-  final String?                    departementId;
-  final ValueChanged<String?>      onChanged;
+  final String?               value;
+  final String?               departementId;
+  final ValueChanged<String?> onChanged;
 
   const RegionDropdown({
     super.key,
@@ -185,32 +183,32 @@ class RegionDropdown extends StatelessWidget {
         .toList();
 
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      initialValue:  value,
       onChanged:     onChanged,
       dropdownColor: AppColors.surface,
       style:         AppTextStyles.input,
-      icon: const Icon(Icons.keyboard_arrow_down,
-          color: AppColors.textMuted),
+      icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted),
       decoration: AppInputDecoration.of('Région / Micro-région'),
       items: regions.map((r) => DropdownMenuItem<String>(
         value: r['id'] as String,
-        child: Text(r['nom'] as String,
-            style: AppTextStyles.input),
+        child: Text(r['nom'] as String, style: AppTextStyles.input),
       )).toList(),
     );
   }
 }
 
-// ── Bouton Ajouter ────────────────────────────────────────────────────────────
+// ── Bouton Ajouter / Modifier ─────────────────────────────────────────────────
 
 class AjouterTemoinButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool          isLoading;
+  final String?       label; // null = "Ajouter" par défaut
 
   const AjouterTemoinButton({
     super.key,
     this.onPressed,
     this.isLoading = false,
+    this.label,
   });
 
   @override
@@ -226,7 +224,10 @@ class AjouterTemoinButton extends StatelessWidget {
                 width: 20, height: 20,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: Colors.black))
-            : const Text('Ajouter', style: AppTextStyles.button),
+            : Text(
+                label ?? 'Ajouter',
+                style: AppTextStyles.button,
+              ),
       ),
     );
   }

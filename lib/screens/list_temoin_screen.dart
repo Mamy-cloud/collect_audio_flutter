@@ -12,7 +12,8 @@ class ListTemoinScreen extends StatefulWidget {
   State<ListTemoinScreen> createState() => _ListTemoinScreenState();
 }
 
-class _ListTemoinScreenState extends State<ListTemoinScreen> {
+class _ListTemoinScreenState extends State<ListTemoinScreen>
+    with RouteAware {
   final _searchCtrl = TextEditingController();
 
   List<Map<String, dynamic>> _temoins   = [];
@@ -22,8 +23,14 @@ class _ListTemoinScreenState extends State<ListTemoinScreen> {
   void initState() {
     super.initState();
     _loadTemoins('');
-    // Recherche au fur et à mesure de la saisie
     _searchCtrl.addListener(() => _loadTemoins(_searchCtrl.text));
+  }
+
+  // Recharge la liste à chaque fois qu'on revient sur cet écran
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadTemoins(_searchCtrl.text);
   }
 
   Future<void> _loadTemoins(String query) async {
@@ -43,10 +50,7 @@ class _ListTemoinScreenState extends State<ListTemoinScreen> {
       isScrollControlled: true,
       backgroundColor:    Colors.transparent,
       builder: (_) => const FormulaireCreerTemoinScreen(),
-    ).then((_) {
-      // Rafraîchir la liste après fermeture du formulaire
-      _loadTemoins(_searchCtrl.text);
-    });
+    ).then((_) => _loadTemoins(_searchCtrl.text));
   }
 
   @override
@@ -61,20 +65,17 @@ class _ListTemoinScreenState extends State<ListTemoinScreen> {
 
               const SizedBox(height: 24),
 
-              // ── Titre ──────────────────────────────────────────────────
               const ListTemoinTitle(),
 
               const SizedBox(height: 20),
 
-              // ── Barre de recherche ─────────────────────────────────────
               SearchField(
                 controller: _searchCtrl,
-                onChanged:  (_) {},  // géré par le listener
+                onChanged:  (_) {},
               ),
 
               const SizedBox(height: 16),
 
-              // ── Liste filtrée en temps réel ────────────────────────────
               Expanded(
                 child: _isLoading
                     ? const Center(
@@ -96,8 +97,6 @@ class _ListTemoinScreenState extends State<ListTemoinScreen> {
           ),
         ),
       ),
-
-      // ── Bouton Ajouter ─────────────────────────────────────────────────
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 8),

@@ -25,7 +25,13 @@ class AppNavbar extends StatelessWidget {
               selected: location.startsWith('/list_temoin'),
               onTap:    () => context.go('/list_temoin'),
             ),
-            // TODO : ajouter d'autres onglets ici
+            _NavItem(
+              icon:     Icons.article_outlined,
+              iconSel:  Icons.article,
+              label:    'Questionnaires',
+              selected: location.startsWith('/questionnaire'),
+              onTap:    () => context.go('/questionnaire'),
+            ),
           ],
         ),
       ),
@@ -34,10 +40,10 @@ class AppNavbar extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  final IconData  icon;
-  final IconData  iconSel;
-  final String    label;
-  final bool      selected;
+  final IconData     icon;
+  final IconData     iconSel;
+  final String       label;
+  final bool         selected;
   final VoidCallback onTap;
 
   const _NavItem({

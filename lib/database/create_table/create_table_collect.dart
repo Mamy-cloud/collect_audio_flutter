@@ -1,3 +1,4 @@
+// create_table_collect.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -46,6 +47,10 @@ class CreateTableTemoin {
       },
     );
   }
+
+  // ─────────────────────────────────────────
+  // CRÉATION DES TABLES
+  // ─────────────────────────────────────────
 
   static Future<void> _createInfoPersoTemoin(Database db) async {
     await db.execute('''

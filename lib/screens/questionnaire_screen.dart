@@ -1,0 +1,294 @@
+// questionnaire_screen.dart
+// Formulaire de contexte avant enregistrement oral.
+// Flow : remplir le formulaire → ouvrir le magnétophone (bottom sheet) → sauvegarder.
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../database/save_questionnaire/save_questionnaire.dart';
+import '../database/create_table/create_table_temoin.dart';
+import '../widgets/global/app_styles.dart';
+import '../widgets/screens_widgets/questionnaire_widget.dart';
+import 'audio_record.dart';
+
+class QuestionnaireScreen extends StatefulWidget {
+  const QuestionnaireScreen({super.key});
+
+  @override
+  State<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
+}
+
+class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
+
+  // ── État formulaire ────────────────────────────────────────────────────────
+
+  Map<String, dynamic>? _temoinSelectionne;
+  List<Map<String, dynamic>> _searchResults = [];
+
+  final _accompagnantCtrl  = TextEditingController();
+  final _sujetCtrl         = TextEditingController();
+
+  String? _lieu;
+  String? _periodeEvoquee;
+  List<String> _themes = [];
+
+  bool _isLoading = false;
+
+  // ── Options des selects ────────────────────────────────────────────────────
+
+  static const _lieuxOptions = [
+    'Domicile', 'EHPAD', 'Extérieur', 'Cuisine de la ferme', 'Autre',
+  ];
+
+  static const _periodesOptions = [
+    'Enfance', 'Avant-guerre', 'Années 40', 'Années 50',
+    'Années 60', 'Années 70', 'Années 80', 'Autre',
+  ];
+
+  // ── Recherche témoin ───────────────────────────────────────────────────────
+
+  Future<void> _searchTemoin(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() { _searchResults = []; });
+      return;
+    }
+
+    final db      = CreateTableTemoin.db;
+    final results = await db.query(
+      'info_perso_temoin',
+      where:     'LOWER(nom) LIKE ? OR LOWER(prenom) LIKE ?',
+      whereArgs: ['%${query.toLowerCase()}%', '%${query.toLowerCase()}%'],
+      limit:     5,
+    );
+
+    setState(() => _searchResults = results);
+  }
+
+  void _selectTemoin(Map<String, dynamic> t) {
+    setState(() {
+      _temoinSelectionne = t;
+      _searchResults     = [];
+    });
+  }
+
+  // ── Ouverture du magnétophone ──────────────────────────────────────────────
+
+  void _openAudioSheet() {
+    if (_temoinSelectionne == null) {
+      _snack('Sélectionnez un témoin avant d\'enregistrer');
+      return;
+    }
+
+    showModalBottomSheet(
+      context:        context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AudioRecordSheet(
+        onSave: (audioPath) => _saveAll(audioPath),
+      ),
+    );
+  }
+
+  // ── Sauvegarde ─────────────────────────────────────────────────────────────
+
+  Future<void> _saveAll(String audioPath) async {
+    setState(() => _isLoading = true);
+
+    try {
+      // TODO : remplacer 'user_id_courant' par l'id de l'utilisateur connecté
+      await SaveQuestionnaire.save(
+        userId:         'test', // TODO : remplacer par l'id de l'utilisateur connecté
+        temoinId:       _temoinSelectionne!['id'] as String,
+        accompagnant:   _accompagnantCtrl.text.trim().isEmpty
+                            ? null : _accompagnantCtrl.text.trim(),
+        lieu:           _lieu,
+        periodeEvoquee: _periodeEvoquee,
+        themes:         _themes,
+        sujetDuJour:    _sujetCtrl.text.trim().isEmpty
+                            ? null : _sujetCtrl.text.trim(),
+        urlAudio:       audioPath,
+      );
+
+      if (!mounted) return;
+      _reset();
+      context.go('/notification_save_collect', extra: {
+        'success': true,
+        'message': null,
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      context.go('/notification_save_collect', extra: {
+        'success': false,
+        'message': e.toString(),
+      });
+    }
+  }
+
+  void _reset() {
+    setState(() {
+      _temoinSelectionne = null;
+      _searchResults     = [];
+      _lieu              = null;
+      _periodeEvoquee    = null;
+      _themes            = [];
+    });
+    _accompagnantCtrl.clear();
+    _sujetCtrl.clear();
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:         Text(msg, style: const TextStyle(color: Colors.white)),
+      backgroundColor: AppColors.surface,
+      behavior:        SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side:         const BorderSide(color: Colors.white24),
+      ),
+    ));
+  }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation:       0,
+        title: const Text(
+          'Nouveau questionnaire',
+          style: TextStyle(
+            fontSize:   17,
+            fontWeight: FontWeight.w600,
+            color:      AppColors.textPrimary,
+          ),
+        ),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  // ── Qui ? ───────────────────────────────────────────────
+                  _SectionTitle('Qui ?'),
+                  const SizedBox(height: 10),
+
+                  if (_temoinSelectionne == null)
+                    TemoinSearchBar(
+                      results:    _searchResults,
+                      onSearch:   _searchTemoin,
+                      onSelected: _selectTemoin,
+                    )
+                  else
+                    TemoinSelectedChip(
+                      label: '${_temoinSelectionne!['prenom']} ${_temoinSelectionne!['nom']}',
+                      onRemove: () => setState(() => _temoinSelectionne = null),
+                    ),
+
+                  const SizedBox(height: 14),
+
+                  QTextField(
+                    label:      'Accompagnants',
+                    hint:       'ex. Sa fille était présente dans la pièce',
+                    controller: _accompagnantCtrl,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Où ? ────────────────────────────────────────────────
+                  _SectionTitle('Où ?'),
+                  const SizedBox(height: 10),
+
+                  QSelect(
+                    label:     'Lieu',
+                    value:     _lieu,
+                    options:   _lieuxOptions,
+                    hint:      'Sélectionner un lieu…',
+                    onChanged: (v) => setState(() => _lieu = v),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Quand ? ─────────────────────────────────────────────
+                  _SectionTitle('Quand ?'),
+                  const SizedBox(height: 10),
+
+                  QSelect(
+                    label:     'Période évoquée',
+                    value:     _periodeEvoquee,
+                    options:   _periodesOptions,
+                    hint:      'Sélectionner une période…',
+                    onChanged: (v) => setState(() => _periodeEvoquee = v),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Thèmes ───────────────────────────────────────────────
+                  ThemesTagGrid(
+                    selected: _themes,
+                    onToggle: (theme, isSel) {
+                      setState(() {
+                        isSel
+                            ? _themes.add(theme)
+                            : _themes.remove(theme);
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Quoi ? ──────────────────────────────────────────────
+                  _SectionTitle('Quoi ?'),
+                  const SizedBox(height: 10),
+
+                  QTextField(
+                    label:      'Sujet du jour',
+                    hint:       'ex. Récit de son arrivée au village en 1964',
+                    controller: _sujetCtrl,
+                    maxLines:   3,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // ── Bouton audio ─────────────────────────────────────────
+                  PrendreTemoignageButton(onPressed: _openAudioSheet),
+
+                ],
+              ),
+            ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _accompagnantCtrl.dispose();
+    _sujetCtrl.dispose();
+    super.dispose();
+  }
+}
+
+// ── Titre de section ───────────────────────────────────────────────────────────
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize:      13,
+        fontWeight:    FontWeight.w600,
+        color:         AppColors.textMuted,
+        letterSpacing: 0.8,
+      ),
+    );
+  }
+}

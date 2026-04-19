@@ -2,13 +2,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../database/conserve_data/conserve_data_to_sqlite.dart';
+import '../database/update_delete/modify_info_temoin.dart';
 import '../widgets/global/app_styles.dart';
 import '../widgets/screens_widgets/formulaire_creer_temoin_widgets.dart';
 
 class FormulaireCreerTemoinScreen extends StatefulWidget {
-  const FormulaireCreerTemoinScreen({super.key});
+  // null = mode création, non-null = mode édition
+  final Map<String, dynamic>? temoin;
+
+  const FormulaireCreerTemoinScreen({super.key, this.temoin});
 
   @override
   State<FormulaireCreerTemoinScreen> createState() =>
@@ -25,6 +30,23 @@ class _FormulaireCreerTemoinScreenState
   String? _regionId;
   String? _imgPath;
   bool    _isLoading = false;
+
+  bool get _isEditMode => widget.temoin != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pré-remplir les champs en mode édition
+    if (_isEditMode) {
+      final t = widget.temoin!;
+      _nomCtrl.text    = t['nom']            as String? ?? '';
+      _prenomCtrl.text = t['prenom']         as String? ?? '';
+      _dateCtrl.text   = t['date_naissance'] as String? ?? '';
+      _deptId          = t['departement']    as String?;
+      _regionId        = t['region']         as String?;
+      _imgPath         = t['img_temoin']     as String?;
+    }
+  }
 
   void _onDeptChanged(String? id) {
     setState(() { _deptId = id; _regionId = null; });
@@ -52,9 +74,23 @@ class _FormulaireCreerTemoinScreenState
     }
   }
 
+  // ── Linux : file_selector ─────────────────────────────────────────────────
+
+  Future<void> _pickImageLinux() async {
+    const typeGroup = XTypeGroup(
+      label: 'images',
+      extensions: ['jpg', 'jpeg', 'png', 'webp'],
+    );
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file != null) setState(() => _imgPath = file.path);
+  }
+
   // ── Android/iOS : image_picker ────────────────────────────────────────────
 
   Future<void> _pickImage() async {
+    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+      await _pickImageLinux(); return;
+    }
     await Permission.photos.request();
     final picker = ImagePicker();
     final picked = await picker.pickImage(
@@ -63,6 +99,9 @@ class _FormulaireCreerTemoinScreenState
   }
 
   Future<void> _takePhoto() async {
+    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+      await _pickImageLinux(); return;
+    }
     await Permission.camera.request();
     final picker = ImagePicker();
     final picked = await picker.pickImage(
@@ -89,15 +128,30 @@ class _FormulaireCreerTemoinScreenState
     setState(() => _isLoading = true);
 
     try {
-      await ConserveDataToSqlite.insertInfoPersoTemoin(
-        nom:           nom,
-        prenom:        prenom,
-        dateNaissance: _dateCtrl.text.trim().isEmpty
-                           ? null : _dateCtrl.text.trim(),
-        departement:   _deptId,
-        region:        _regionId,
-        imgTemoinPath: _imgPath,
-      );
+      if (_isEditMode) {
+        // ── Mode édition : update SQLite ──────────────────────────────
+        await ModifyInfoTemoin.update(
+          id:            widget.temoin!['id'] as String,
+          nom:           nom,
+          prenom:        prenom,
+          dateNaissance: _dateCtrl.text.trim().isEmpty
+                             ? null : _dateCtrl.text.trim(),
+          departement:   _deptId,
+          region:        _regionId,
+          imgTemoin:     _imgPath,
+        );
+      } else {
+        // ── Mode création : insert SQLite ─────────────────────────────
+        await ConserveDataToSqlite.insertInfoPersoTemoin(
+          nom:           nom,
+          prenom:        prenom,
+          dateNaissance: _dateCtrl.text.trim().isEmpty
+                             ? null : _dateCtrl.text.trim(),
+          departement:   _deptId,
+          region:        _regionId,
+          imgTemoinPath: _imgPath,
+        );
+      }
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -157,9 +211,9 @@ class _FormulaireCreerTemoinScreenState
               ),
             ),
 
-            const Text(
-              'Créer un témoin',
-              style: TextStyle(
+            Text(
+              _isEditMode ? 'Modifier le témoin' : 'Créer un témoin',
+              style: const TextStyle(
                 fontSize:   18,
                 fontWeight: FontWeight.w700,
                 color:      AppColors.textPrimary,
@@ -205,8 +259,9 @@ class _FormulaireCreerTemoinScreenState
             const SizedBox(height: 28),
 
             AjouterTemoinButton(
-              onPressed:  _submit,
-              isLoading:  _isLoading,
+              onPressed: _submit,
+              isLoading: _isLoading,
+              label:     _isEditMode ? 'Enregistrer les modifications' : null,
             ),
           ],
         ),
