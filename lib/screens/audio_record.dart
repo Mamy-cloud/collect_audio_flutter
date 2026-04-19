@@ -1,6 +1,6 @@
-// audio_record.dart
-// Linux       → ffmpeg via dart:io  (sudo apt install ffmpeg)
-// Android/iOS → flutter_sound
+// audio_record.dart — VERSION ANDROID/iOS
+// Utilise flutter_sound pour l'enregistrement
+// Pour Linux : utiliser audio_record_linux.dart avec ffmpeg
 
 import 'dart:async';
 import 'dart:io';
@@ -20,112 +20,45 @@ class AudioRecordSheet extends StatefulWidget {
 }
 
 class _AudioRecordSheetState extends State<AudioRecordSheet> {
-  _Status  _status  = _Status.idle;
-  Duration _elapsed = Duration.zero;
-  Timer?   _timer;
-
-  // ── Linux : ffmpeg ─────────────────────────────────────────────────────────
-  Process?           _ffmpegProcess;
-  final List<String> _segments = [];
-  String?            _finalPath;
-
-  // ── Android/iOS : flutter_sound ────────────────────────────────────────────
+  _Status               _status       = _Status.idle;
+  Duration              _elapsed      = Duration.zero;
+  Timer?                _timer;
+  String?               _finalPath;
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  bool _recorderOpened = false;
+  bool                  _recorderOpen = false;
 
-  bool get _isDesktop =>
-      Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+  // ─── Initialisation ────────────────────────────────────────────────────────
+
+  Future<void> _openRecorder() async {
+    if (!_recorderOpen) {
+      final status = await Permission.microphone.request();
+      if (!status.isGranted) {
+        throw Exception('Permission microphone refusée');
+      }
+      await _recorder.openRecorder();
+      _recorderOpen = true;
+    }
+  }
 
   // ─── Chemins ───────────────────────────────────────────────────────────────
 
-  Future<String> _newPath(String prefix) async {
+  Future<String> _newPath() async {
     final dir = await getApplicationDocumentsDirectory();
-    return p.join(
-        dir.path, '${prefix}_${DateTime.now().millisecondsSinceEpoch}.aac');
+    return p.join(dir.path,
+        'temoignage_${DateTime.now().millisecondsSinceEpoch}.aac');
   }
 
-  // ─── Linux : ffmpeg ────────────────────────────────────────────────────────
-
-  Future<void> _ffmpegStartSegment() async {
-    final path = await _newPath('segment');
-    _ffmpegProcess = await Process.start(
-        'ffmpeg', ['-f', 'alsa', '-i', 'default', '-y', path]);
-    _segments.add(path);
-  }
-
-  Future<void> _ffmpegStopSegment() async {
-    try {
-      _ffmpegProcess?.stdin.write('q');
-      await _ffmpegProcess?.stdin.flush();
-      await _ffmpegProcess?.exitCode.timeout(
-        const Duration(seconds: 3),
-        onTimeout: () {
-          _ffmpegProcess?.kill();
-          return -1;
-        },
-      );
-    } catch (_) {
-      _ffmpegProcess?.kill();
-    }
-    _ffmpegProcess = null;
-  }
-
-  Future<void> _ffmpegMerge(String output) async {
-    if (_segments.length == 1) {
-      _finalPath = _segments.first;
-      return;
-    }
-    final dir      = await getApplicationDocumentsDirectory();
-    final listFile = p.join(dir.path, 'segments_list.txt');
-    await File(listFile)
-        .writeAsString(_segments.map((s) => "file '$s'").join('\n'));
-    await Process.run('ffmpeg', [
-      '-f', 'concat', '-safe', '0',
-      '-i', listFile, '-c', 'copy', '-y', output
-    ]);
-    for (final s in _segments) {
-      try { File(s).deleteSync(); } catch (_) {}
-    }
-    try { File(listFile).deleteSync(); } catch (_) {}
-    _finalPath = output;
-  }
-
-  // ─── Android/iOS : flutter_sound ──────────────────────────────────────────
-
-  Future<void> _openRecorder() async {
-    if (!_recorderOpened) {
-      await Permission.microphone.request();
-      await _recorder.openRecorder();
-      _recorderOpened = true;
-    }
-  }
-
-  Future<void> _soundStart() async {
-    await _openRecorder();
-    final path = await _newPath('temoignage');
-    _finalPath = path;
-    await _recorder.startRecorder(
-      toFile: path,
-      codec:  Codec.aacADTS,
-    );
-  }
-
-  Future<void> _soundPause()  async => await _recorder.pauseRecorder();
-  Future<void> _soundResume() async => await _recorder.resumeRecorder();
-  Future<void> _soundStop()   async => await _recorder.stopRecorder();
-
-  // ─── Actions unifiées ──────────────────────────────────────────────────────
+  // ─── Actions ───────────────────────────────────────────────────────────────
 
   Future<void> _startRecording() async {
-    _segments.clear();
+    await _openRecorder();
     _elapsed   = Duration.zero;
-    _finalPath = null;
+    _finalPath = await _newPath();
 
-    if (_isDesktop) {
-      await _ffmpegStartSegment();
-    } else {
-      await _soundStart();
-    }
+    await _recorder.startRecorder(
+      toFile: _finalPath,
+      codec:  Codec.aacADTS,
+    );
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _elapsed += const Duration(seconds: 1));
@@ -135,20 +68,12 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
 
   Future<void> _pauseRecording() async {
     _timer?.cancel();
-    if (_isDesktop) {
-      await _ffmpegStopSegment();
-    } else {
-      await _soundPause();
-    }
+    await _recorder.pauseRecorder();
     setState(() => _status = _Status.paused);
   }
 
   Future<void> _resumeRecording() async {
-    if (_isDesktop) {
-      await _ffmpegStartSegment();
-    } else {
-      await _soundResume();
-    }
+    await _recorder.resumeRecorder();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _elapsed += const Duration(seconds: 1));
     });
@@ -157,13 +82,7 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
 
   Future<void> _stopRecording() async {
     _timer?.cancel();
-    if (_isDesktop) {
-      await _ffmpegStopSegment();
-      final out = await _newPath('temoignage');
-      await _ffmpegMerge(out);
-    } else {
-      await _soundStop();
-    }
+    await _recorder.stopRecorder();
     setState(() => _status = _Status.done);
   }
 
@@ -176,15 +95,13 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
 
   void _reset() {
     _timer?.cancel();
-    _ffmpegProcess?.kill();
-    for (final s in _segments) {
-      try { File(s).deleteSync(); } catch (_) {}
+    if (_finalPath != null) {
+      try { File(_finalPath!).deleteSync(); } catch (_) {}
     }
     setState(() {
       _status    = _Status.idle;
       _elapsed   = Duration.zero;
       _finalPath = null;
-      _segments.clear();
     });
   }
 
@@ -197,8 +114,7 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
   @override
   void dispose() {
     _timer?.cancel();
-    _ffmpegProcess?.kill();
-    if (_recorderOpened) _recorder.closeRecorder();
+    if (_recorderOpen) _recorder.closeRecorder();
     super.dispose();
   }
 
@@ -225,10 +141,8 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
             ),
           ),
           const Text('Témoignage oral',
-              style: TextStyle(
-                  fontSize:   18,
-                  fontWeight: FontWeight.w700,
-                  color:      AppColors.textPrimary)),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary)),
           const SizedBox(height: 32),
           _Magnetophone(status: _status, elapsedLabel: _elapsedLabel),
           const SizedBox(height: 32),
@@ -242,38 +156,36 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
             ),
 
           if (_status == _Status.recording) ...[
-            _CtrlButton(
-              icon: Icons.pause, label: 'Pause',
-              color: AppColors.textMuted, onTap: _pauseRecording),
+            _CtrlButton(icon: Icons.pause, label: 'Pause',
+                color: AppColors.textMuted, onTap: _pauseRecording),
             const SizedBox(height: 12),
-            _CtrlButton(
-              icon: Icons.stop, label: 'Arrêter',
-              color: const Color(0xFFE53935), onTap: _stopRecording),
+            _CtrlButton(icon: Icons.stop, label: 'Arrêter',
+                color: const Color(0xFFE53935), onTap: _stopRecording),
           ],
 
           if (_status == _Status.paused) ...[
-            _CtrlButton(
-              icon: Icons.play_arrow, label: 'Reprendre',
-              color: AppColors.textPrimary, onTap: _resumeRecording),
+            _CtrlButton(icon: Icons.play_arrow, label: 'Reprendre',
+                color: AppColors.textPrimary, onTap: _resumeRecording),
             const SizedBox(height: 12),
-            _CtrlButton(
-              icon: Icons.stop, label: 'Arrêter',
-              color: const Color(0xFFE53935), onTap: _stopRecording),
+            _CtrlButton(icon: Icons.stop, label: 'Arrêter',
+                color: const Color(0xFFE53935), onTap: _stopRecording),
           ],
 
           if (_status == _Status.done) ...[
             _CtrlButton(
-              icon: Icons.save_alt, label: 'Enregistrer le témoignage',
-              color: AppColors.textPrimary, onTap: _saveTestimony,
-              filled: true),
+              icon: Icons.save_alt,
+              label: 'Enregistrer le témoignage',
+              color: AppColors.textPrimary,
+              onTap: _saveTestimony,
+              filled: true,
+            ),
             const SizedBox(height: 12),
             TextButton.icon(
               onPressed: _reset,
-              icon:  const Icon(Icons.refresh,
-                  size: 16, color: AppColors.textMuted),
+              icon:  const Icon(Icons.refresh, size: 16,
+                  color: AppColors.textMuted),
               label: const Text('Recommencer',
-                  style: TextStyle(
-                      color: AppColors.textMuted, fontSize: 13)),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
             ),
           ],
         ],
@@ -282,11 +194,12 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
   }
 }
 
+// ── Magnétophone visuel ────────────────────────────────────────────────────────
+
 class _Magnetophone extends StatelessWidget {
   final _Status status;
   final String  elapsedLabel;
-  const _Magnetophone(
-      {required this.status, required this.elapsedLabel});
+  const _Magnetophone({required this.status, required this.elapsedLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -294,9 +207,9 @@ class _Magnetophone extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
       decoration: BoxDecoration(
-        color:        AppColors.inputFill,
+        color: AppColors.inputFill,
         borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: const Color(0xFF333333)),
+        border: Border.all(color: const Color(0xFF333333)),
       ),
       child: Column(
         children: [
@@ -308,8 +221,7 @@ class _Magnetophone extends StatelessWidget {
                   width: 80, height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFE53935)
-                        .withValues(alpha: 0.15),
+                    color: const Color(0xFFE53935).withValues(alpha: 0.15),
                   ),
                 ),
               Container(
@@ -325,8 +237,7 @@ class _Magnetophone extends StatelessWidget {
                         : const Color(0xFF444444),
                   ),
                 ),
-                child: Icon(Icons.mic,
-                    size:  30,
+                child: Icon(Icons.mic, size: 30,
                     color: isRecording
                         ? const Color(0xFFE53935)
                         : AppColors.textMuted),
@@ -336,19 +247,16 @@ class _Magnetophone extends StatelessWidget {
           const SizedBox(height: 20),
           Text(elapsedLabel,
               style: const TextStyle(
-                fontSize:     36,
-                fontWeight:   FontWeight.w300,
-                color:        AppColors.textPrimary,
+                fontSize: 36, fontWeight: FontWeight.w300,
+                color: AppColors.textPrimary,
                 fontFeatures: [FontFeature.tabularFigures()],
               )),
           const SizedBox(height: 8),
           Text(_statusLabel(status),
-              style: TextStyle(
-                fontSize: 12,
-                color: isRecording
-                    ? const Color(0xFFE53935)
-                    : AppColors.textMuted,
-              )),
+              style: TextStyle(fontSize: 12,
+                  color: isRecording
+                      ? const Color(0xFFE53935)
+                      : AppColors.textMuted)),
         ],
       ),
     );
@@ -363,6 +271,8 @@ class _Magnetophone extends StatelessWidget {
     }
   }
 }
+
+// ── Bouton de contrôle ─────────────────────────────────────────────────────────
 
 class _CtrlButton extends StatelessWidget {
   final IconData icon; final String label;
@@ -381,15 +291,13 @@ class _CtrlButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           backgroundColor: filled ? color : Colors.transparent,
           foregroundColor: filled ? AppColors.background : color,
-          side: BorderSide(
-              color: filled ? color : const Color(0xFF444444)),
+          side: BorderSide(color: filled ? color : const Color(0xFF444444)),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10)),
         ),
         icon:  Icon(icon, size: 18),
-        label: Text(label,
-            style: const TextStyle(fontSize: 14)),
+        label: Text(label, style: const TextStyle(fontSize: 14)),
       ),
     );
   }

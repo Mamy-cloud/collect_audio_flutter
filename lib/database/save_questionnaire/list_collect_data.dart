@@ -1,6 +1,4 @@
 // list_collect_data.dart
-// Liste des questionnaires et enregistrements audio d'un témoin
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../database/create_table/create_table_temoin.dart';
@@ -28,26 +26,27 @@ class _ListCollectDataState extends State<ListCollectData> {
 
   Future<void> _loadCollectes() async {
     final db   = CreateTableTemoin.db;
-    final rows = await db.rawQuery('''
-      SELECT
-        c.id,
-        c.questionnaire,
-        c.url_audio,
-        c.created_at
-      FROM collect_info_from_temoin c
-      WHERE json_extract(c.questionnaire, '\$[0].valeur') = ?
-      ORDER BY c.created_at DESC
-    ''', [widget.temoin['id']]);
+    // Filtrage côté Dart — évite json_extract non supporté sur Android ancien
+    final rows = await db.query(
+      'collect_info_from_temoin',
+      orderBy: 'created_at DESC',
+    );
 
-    final collectes = rows.map((row) {
+    final collectes = <Map<String, dynamic>>[];
+    for (final row in rows) {
       final r = Map<String, dynamic>.from(row);
       try {
-        r['questionnaire'] = jsonDecode(r['questionnaire'] as String);
+        final q = jsonDecode(r['questionnaire'] as String) as List<dynamic>;
+        r['questionnaire'] = q;
+        if (q.isNotEmpty &&
+            q.first['champ'] == 'temoin_id' &&
+            q.first['valeur'] == widget.temoin['id']) {
+          collectes.add(r);
+        }
       } catch (_) {
         r['questionnaire'] = [];
       }
-      return r;
-    }).toList();
+    }
 
     setState(() {
       _collectes = collectes;
@@ -82,13 +81,8 @@ class _ListCollectDataState extends State<ListCollectData> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  // ── Infos personnelles ──────────────────────────────────
                   InfoPersoCard(temoin: t),
-
                   const SizedBox(height: 24),
-
-                  // ── Titre section ───────────────────────────────────────
                   Row(
                     children: [
                       const Text(
@@ -115,15 +109,11 @@ class _ListCollectDataState extends State<ListCollectData> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
-
-                  // ── Liste collectes ─────────────────────────────────────
                   if (_collectes.isEmpty)
                     const CollecteEmptyState()
                   else
                     ..._collectes.map((c) => CollecteCard(collecte: c)),
-
                 ],
               ),
             ),

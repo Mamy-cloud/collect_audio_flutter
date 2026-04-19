@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../database/create_table/create_table_temoin.dart';
 import '../widgets/global/app_styles.dart';
 import '../widgets/screens_widgets/save_local_widget.dart';
@@ -28,23 +27,31 @@ class _SaveLocalDetailScreenState extends State<SaveLocalDetailScreen> {
 
   Future<void> _loadCollectes() async {
     setState(() => _isLoading = true);
-    final db = CreateTableTemoin.db;
-    final rows = await db.rawQuery('''
-      SELECT c.id, c.questionnaire, c.url_audio, c.created_at
-      FROM collect_info_from_temoin c
-      WHERE json_extract(c.questionnaire, '\$[0].valeur') = ?
-      ORDER BY c.created_at DESC
-    ''', [_temoin['id']]);
+    final db  = CreateTableTemoin.db;
+    // Récupère toutes les collectes et filtre côté Dart
+    // pour éviter json_extract qui peut ne pas être disponible
+    // sur les anciennes versions SQLite Android
+    final rows = await db.query(
+      'collect_info_from_temoin',
+      orderBy: 'created_at DESC',
+    );
 
-    final collectes = rows.map((row) {
+    final collectes = <Map<String, dynamic>>[];
+    for (final row in rows) {
       final r = Map<String, dynamic>.from(row);
       try {
-        r['questionnaire'] = jsonDecode(r['questionnaire'] as String);
+        final q = jsonDecode(r['questionnaire'] as String) as List<dynamic>;
+        r['questionnaire'] = q;
+        // Vérifie que le premier élément correspond à ce témoin
+        if (q.isNotEmpty &&
+            q.first['champ'] == 'temoin_id' &&
+            q.first['valeur'] == _temoin['id']) {
+          collectes.add(r);
+        }
       } catch (_) {
         r['questionnaire'] = [];
       }
-      return r;
-    }).toList();
+    }
 
     setState(() {
       _collectes = collectes;

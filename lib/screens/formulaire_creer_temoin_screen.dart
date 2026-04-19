@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_selector/file_selector.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../database/conserve_data/conserve_data_to_sqlite.dart';
 import '../database/update_delete/modify_info_temoin.dart';
@@ -10,7 +9,6 @@ import '../widgets/global/app_styles.dart';
 import '../widgets/screens_widgets/formulaire_creer_temoin_widgets.dart';
 
 class FormulaireCreerTemoinScreen extends StatefulWidget {
-  // null = mode création, non-null = mode édition
   final Map<String, dynamic>? temoin;
 
   const FormulaireCreerTemoinScreen({super.key, this.temoin});
@@ -36,7 +34,6 @@ class _FormulaireCreerTemoinScreenState
   @override
   void initState() {
     super.initState();
-    // Pré-remplir les champs en mode édition
     if (_isEditMode) {
       final t = widget.temoin!;
       _nomCtrl.text    = t['nom']            as String? ?? '';
@@ -74,39 +71,26 @@ class _FormulaireCreerTemoinScreenState
     }
   }
 
-  // ── Linux : file_selector ─────────────────────────────────────────────────
-
-  Future<void> _pickImageLinux() async {
-    const typeGroup = XTypeGroup(
-      label: 'images',
-      extensions: ['jpg', 'jpeg', 'png', 'webp'],
-    );
-    final file = await openFile(acceptedTypeGroups: [typeGroup]);
-    if (file != null) setState(() => _imgPath = file.path);
-  }
-
   // ── Android/iOS : image_picker ────────────────────────────────────────────
 
   Future<void> _pickImage() async {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-      await _pickImageLinux(); return;
-    }
     await Permission.photos.request();
     final picker = ImagePicker();
     final picked = await picker.pickImage(
         source: ImageSource.gallery, imageQuality: 80);
-    if (picked != null) setState(() => _imgPath = picked.path);
+    if (picked != null && mounted) {
+      setState(() => _imgPath = picked.path);
+    }
   }
 
   Future<void> _takePhoto() async {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-      await _pickImageLinux(); return;
-    }
     await Permission.camera.request();
     final picker = ImagePicker();
     final picked = await picker.pickImage(
         source: ImageSource.camera, imageQuality: 80);
-    if (picked != null) setState(() => _imgPath = picked.path);
+    if (picked != null && mounted) {
+      setState(() => _imgPath = picked.path);
+    }
   }
 
   void _removeImage() => setState(() => _imgPath = null);
@@ -129,7 +113,6 @@ class _FormulaireCreerTemoinScreenState
 
     try {
       if (_isEditMode) {
-        // ── Mode édition : update SQLite ──────────────────────────────
         await ModifyInfoTemoin.update(
           id:            widget.temoin!['id'] as String,
           nom:           nom,
@@ -141,7 +124,6 @@ class _FormulaireCreerTemoinScreenState
           imgTemoin:     _imgPath,
         );
       } else {
-        // ── Mode création : insert SQLite ─────────────────────────────
         await ConserveDataToSqlite.insertInfoPersoTemoin(
           nom:           nom,
           prenom:        prenom,
@@ -155,6 +137,7 @@ class _FormulaireCreerTemoinScreenState
 
       if (!mounted) return;
       Navigator.of(context).pop();
+      if (!mounted) return;
       context.go('/notification_add_temoin', extra: {
         'success': true,
         'message': null,
@@ -162,7 +145,9 @@ class _FormulaireCreerTemoinScreenState
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+      if (!mounted) return;
       Navigator.of(context).pop();
+      if (!mounted) return;
       context.go('/notification_add_temoin', extra: {
         'success': false,
         'message': e.toString(),

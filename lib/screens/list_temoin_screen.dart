@@ -12,8 +12,7 @@ class ListTemoinScreen extends StatefulWidget {
   State<ListTemoinScreen> createState() => _ListTemoinScreenState();
 }
 
-class _ListTemoinScreenState extends State<ListTemoinScreen>
-    with RouteAware {
+class _ListTemoinScreenState extends State<ListTemoinScreen> {
   final _searchCtrl = TextEditingController();
 
   List<Map<String, dynamic>> _temoins   = [];
@@ -24,13 +23,6 @@ class _ListTemoinScreenState extends State<ListTemoinScreen>
     super.initState();
     _loadTemoins('');
     _searchCtrl.addListener(() => _loadTemoins(_searchCtrl.text));
-  }
-
-  // Recharge la liste à chaque fois qu'on revient sur cet écran
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadTemoins(_searchCtrl.text);
   }
 
   Future<void> _loadTemoins(String query) async {

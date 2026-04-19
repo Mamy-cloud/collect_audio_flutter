@@ -117,6 +117,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+      if (!mounted) return;
       context.go('/notification_save_collect', extra: {
         'success': false,
         'message': e.toString(),

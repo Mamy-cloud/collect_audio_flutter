@@ -15,29 +15,22 @@ dependencies:
   go_router: ^14.0.0
 
   # Base de données locale
-  # Linux/Windows/macOS → sqflite_common_ffi requis
-  # Android/iOS         → sqflite natif suffit
-  sqflite:            ^2.3.0
-  path:               ^1.9.0
+  sqflite: ^2.3.0
+  path:    ^1.9.0
 
-  # Lecture audio — compatible Linux/Android/iOS
+  # Lecture audio — compatible Android/iOS
   audioplayers: ^6.0.0
 
-  # Enregistrement audio
-  # Linux → ffmpeg via dart:io (sudo apt install ffmpeg)
-  # Android/iOS → flutter_sound natif
-  flutter_sound: ^9.0.0
+  # Enregistrement audio — Android/iOS
+  flutter_sound:      ^9.0.0
+  permission_handler: ^11.0.0
 
   # UUID pour les clés primaires
   uuid: ^4.4.0
 
-  # Image
-  # Linux/Windows/macOS → file_selector (pas de permissions requises)
-  # Android/iOS         → image_picker + permission_handler
-  file_selector:      ^1.0.0
-  image_picker:       ^1.0.0
-  permission_handler: ^11.0.0
-  path_provider:      ^2.1.0
+  # Image — Android/iOS
+  image_picker:  ^1.0.0
+  path_provider: ^2.1.0
 
   # Appels API REST
   http: ^1.2.0
