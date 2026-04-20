@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../database/create_table/create_table_temoin.dart';
+import '../services/session_service.dart';
 import '../widgets/global/app_styles.dart';
 import '../widgets/screens_widgets/login_widgets.dart';
 
@@ -16,14 +18,33 @@ class _LoginScreenState extends State<LoginScreen> {
   bool  _isLoading       = false;
 
   Future<void> _onLogin() async {
+    final identifiant = _identifiantCtrl.text.trim();
+    final password    = _codeCtrl.text.trim();
+
+    if (identifiant.isEmpty || password.isEmpty) {
+      _snack('Veuillez remplir tous les champs');
+      return;
+    }
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Vérifie les identifiants en DB
+    final user = await CreateTableTemoin.login(identifiant, password);
+
     if (!mounted) return;
     setState(() => _isLoading = false);
-    context.go('/list_temoin');
-  }
 
-  void _onGuestMode() {
+    if (user == null) {
+      _snack('Identifiant ou code d\'accès incorrect');
+      return;
+    }
+
+    // Sauvegarde la session en mémoire
+    SessionService.login(
+      user['id'] as String,
+      user['identifiant'] as String,
+    );
+
     context.go('/list_temoin');
   }
 
@@ -59,13 +80,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
 
                   const SizedBox(height: 40),
-
                   const Center(child: LoginTitle()),
-
                   const SizedBox(height: 20),
-
                   const LoginHeroImage(assetPath: 'assets/img/logo_essai.png'),
-
                   const SizedBox(height: 20),
 
                   Center(
@@ -78,11 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 36),
 
                   IdentifiantField(controller: _identifiantCtrl),
-
                   const SizedBox(height: 16),
-
                   CodeAccesField(controller: _codeCtrl),
-
                   const SizedBox(height: 28),
 
                   LoginButton(
@@ -91,11 +105,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
 
                   const Spacer(),
-
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 28),
-                    child: GuestModeLink(onTap: _onGuestMode),
-                  ),
                 ],
               ),
             ),

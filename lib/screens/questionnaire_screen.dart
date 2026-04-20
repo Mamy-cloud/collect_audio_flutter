@@ -1,11 +1,9 @@
-// questionnaire_screen.dart
-// Formulaire de contexte avant enregistrement oral.
-// Flow : remplir le formulaire → ouvrir le magnétophone (bottom sheet) → sauvegarder.
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../database/save_questionnaire/save_questionnaire.dart';
 import '../database/create_table/create_table_temoin.dart';
+import '../services/session_service.dart';
 import '../widgets/global/app_styles.dart';
 import '../widgets/screens_widgets/questionnaire_widget.dart';
 import 'audio_record.dart';
@@ -19,21 +17,17 @@ class QuestionnaireScreen extends StatefulWidget {
 
 class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
-  // ── État formulaire ────────────────────────────────────────────────────────
+  Map<String, dynamic>?       _temoinSelectionne;
+  List<Map<String, dynamic>>  _searchResults = [];
+  String?                     _contactSelectionne; // nom du contact sélectionné
 
-  Map<String, dynamic>? _temoinSelectionne;
-  List<Map<String, dynamic>> _searchResults = [];
+  final _accompagnantCtrl = TextEditingController();
+  final _sujetCtrl        = TextEditingController();
 
-  final _accompagnantCtrl  = TextEditingController();
-  final _sujetCtrl         = TextEditingController();
-
-  String? _lieu;
-  String? _periodeEvoquee;
+  String?      _lieu;
+  String?      _periodeEvoquee;
   List<String> _themes = [];
-
-  bool _isLoading = false;
-
-  // ── Options des selects ────────────────────────────────────────────────────
+  bool         _isLoading = false;
 
   static const _lieuxOptions = [
     'Domicile', 'EHPAD', 'Extérieur', 'Cuisine de la ferme', 'Autre',
@@ -43,6 +37,19 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     'Enfance', 'Avant-guerre', 'Années 40', 'Années 50',
     'Années 60', 'Années 70', 'Années 80', 'Autre',
   ];
+
+  // ── Contacts du témoin sélectionné ────────────────────────────────────────
+
+  List<Map<String, String>> get _contactsTemoin {
+    if (_temoinSelectionne == null) return [];
+    try {
+      final raw = _temoinSelectionne!['contacts'];
+      if (raw is List) {
+        return raw.map((c) => Map<String, String>.from(c as Map)).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
 
   // ── Recherche témoin ───────────────────────────────────────────────────────
 
@@ -60,28 +67,39 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       limit:     5,
     );
 
-    setState(() => _searchResults = results);
+    // Décoder les contacts pour chaque résultat
+    setState(() {
+      _searchResults = results.map((row) {
+        final r = Map<String, dynamic>.from(row);
+        try {
+          r['contacts'] = jsonDecode(r['contacts'] as String? ?? '[]');
+        } catch (_) {
+          r['contacts'] = [];
+        }
+        return r;
+      }).toList();
+    });
   }
 
   void _selectTemoin(Map<String, dynamic> t) {
     setState(() {
-      _temoinSelectionne = t;
-      _searchResults     = [];
+      _temoinSelectionne  = t;
+      _searchResults      = [];
+      _contactSelectionne = null; // reset contact quand témoin change
     });
   }
 
-  // ── Ouverture du magnétophone ──────────────────────────────────────────────
+  // ── Audio ──────────────────────────────────────────────────────────────────
 
   void _openAudioSheet() {
     if (_temoinSelectionne == null) {
-      _snack('Sélectionnez un témoin avant d\'enregistrer');
+      _snack("Sélectionnez un témoin avant d'enregistrer");
       return;
     }
-
     showModalBottomSheet(
-      context:        context,
+      context:            context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor:    Colors.transparent,
       builder: (_) => AudioRecordSheet(
         onSave: (audioPath) => _saveAll(audioPath),
       ),
@@ -92,20 +110,19 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
   Future<void> _saveAll(String audioPath) async {
     setState(() => _isLoading = true);
-
     try {
-      // TODO : remplacer 'user_id_courant' par l'id de l'utilisateur connecté
       await SaveQuestionnaire.save(
-        userId:         'test', // TODO : remplacer par l'id de l'utilisateur connecté
-        temoinId:       _temoinSelectionne!['id'] as String,
-        accompagnant:   _accompagnantCtrl.text.trim().isEmpty
-                            ? null : _accompagnantCtrl.text.trim(),
-        lieu:           _lieu,
-        periodeEvoquee: _periodeEvoquee,
-        themes:         _themes,
-        sujetDuJour:    _sujetCtrl.text.trim().isEmpty
-                            ? null : _sujetCtrl.text.trim(),
-        urlAudio:       audioPath,
+        userId:             SessionService.currentUserId ?? 'test',
+        temoinId:           _temoinSelectionne!['id'] as String,
+        accompagnant:       _accompagnantCtrl.text.trim().isEmpty
+                                ? null : _accompagnantCtrl.text.trim(),
+        contact:            _contactSelectionne,
+        lieu:               _lieu,
+        periodeEvoquee:     _periodeEvoquee,
+        themes:             _themes,
+        sujetDuJour:        _sujetCtrl.text.trim().isEmpty
+                                ? null : _sujetCtrl.text.trim(),
+        urlAudio:           audioPath,
       );
 
       if (!mounted) return;
@@ -127,11 +144,12 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
   void _reset() {
     setState(() {
-      _temoinSelectionne = null;
-      _searchResults     = [];
-      _lieu              = null;
-      _periodeEvoquee    = null;
-      _themes            = [];
+      _temoinSelectionne  = null;
+      _searchResults      = [];
+      _contactSelectionne = null;
+      _lieu               = null;
+      _periodeEvoquee     = null;
+      _themes             = [];
     });
     _accompagnantCtrl.clear();
     _sujetCtrl.clear();
@@ -149,8 +167,6 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       ),
     ));
   }
-
-  // ── UI ─────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -189,10 +205,25 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                   else
                     TemoinSelectedChip(
                       label: '${_temoinSelectionne!['prenom']} ${_temoinSelectionne!['nom']}',
-                      onRemove: () => setState(() => _temoinSelectionne = null),
+                      onRemove: () => setState(() {
+                        _temoinSelectionne  = null;
+                        _contactSelectionne = null;
+                      }),
                     ),
 
                   const SizedBox(height: 14),
+
+                  // ── Contact du témoin ────────────────────────────────────
+                  if (_temoinSelectionne != null &&
+                      _contactsTemoin.isNotEmpty) ...[
+                    ContactSelectWidget(
+                      contacts:  _contactsTemoin,
+                      selected:  _contactSelectionne,
+                      onChanged: (v) =>
+                          setState(() => _contactSelectionne = v),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
 
                   QTextField(
                     label:      'Accompagnants',
@@ -235,9 +266,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                     selected: _themes,
                     onToggle: (theme, isSel) {
                       setState(() {
-                        isSel
-                            ? _themes.add(theme)
-                            : _themes.remove(theme);
+                        isSel ? _themes.add(theme) : _themes.remove(theme);
                       });
                     },
                   ),
@@ -257,9 +286,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
                   const SizedBox(height: 32),
 
-                  // ── Bouton audio ─────────────────────────────────────────
                   PrendreTemoignageButton(onPressed: _openAudioSheet),
-
                 ],
               ),
             ),
@@ -273,8 +300,6 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     super.dispose();
   }
 }
-
-// ── Titre de section ───────────────────────────────────────────────────────────
 
 class _SectionTitle extends StatelessWidget {
   final String text;

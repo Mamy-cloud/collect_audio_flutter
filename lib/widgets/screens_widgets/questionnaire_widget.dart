@@ -311,10 +311,10 @@ class QuestionnaireEmptyState extends StatelessWidget {
 // ── Carte questionnaire ────────────────────────────────────────────────────────
 
 class QuestionnaireCard extends StatelessWidget {
-  final String       temoinNom;
-  final String       date;
-  final List<String> themes;
-  final String?      sujet;
+  final String        temoinNom;
+  final String        date;
+  final List<String>  themes;
+  final String?       sujet;
   final VoidCallback? onTap;
 
   const QuestionnaireCard({
@@ -376,6 +376,63 @@ class QuestionnaireCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Select contact du témoin ───────────────────────────────────────────────────
+
+class ContactSelectWidget extends StatelessWidget {
+  final List<Map<String, String>> contacts;
+  final String?                   selected;
+  final void Function(String?)    onChanged;
+
+  const ContactSelectWidget({
+    super.key,
+    required this.contacts,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final options = contacts
+        .map((c) => c['nom'] ?? '')
+        .where((n) => n.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Contact présent', style: AppTextStyles.label),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value:         selected,
+          hint:          Text('Sélectionner un contact…',
+                             style: AppTextStyles.label),
+          style:         AppTextStyles.input,
+          dropdownColor: AppColors.inputFill,
+          decoration:    AppInputDecoration.of(''),
+          items: [
+            DropdownMenuItem<String>(
+              value: null,
+              child: Text('Aucun', style: AppTextStyles.label),
+            ),
+            ...options.map((name) => DropdownMenuItem<String>(
+              value: name,
+              child: Row(
+                children: [
+                  const Icon(Icons.person_outline,
+                      size: 15, color: AppColors.textMuted),
+                  const SizedBox(width: 8),
+                  Text(name),
+                ],
+              ),
+            )),
+          ],
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

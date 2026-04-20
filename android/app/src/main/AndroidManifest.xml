@@ -15,12 +15,22 @@
     <!-- Caméra -->
     <uses-permission android:name="android.permission.CAMERA"/>
 
+    <!-- Internet -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Réseau local -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+
     <application
         android:label="collect_audio"
+        android:usesCleartextTraffic="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
+            android:networkSecurityConfig="@xml/network_security_config"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

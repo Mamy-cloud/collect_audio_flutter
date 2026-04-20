@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,7 @@ class _FormulaireCreerTemoinScreenState
   String? _regionId;
   String? _imgPath;
   bool    _isLoading = false;
+  List<Map<String, String>> _contacts = [];
 
   bool get _isEditMode => widget.temoin != null;
 
@@ -42,6 +44,21 @@ class _FormulaireCreerTemoinScreenState
       _deptId          = t['departement']    as String?;
       _regionId        = t['region']         as String?;
       _imgPath         = t['img_temoin']     as String?;
+
+      // Charger les contacts existants
+      try {
+        final raw = t['contacts'];
+        if (raw is List) {
+          _contacts = raw.map((c) =>
+              Map<String, String>.from(c as Map)).toList();
+        } else if (raw is String) {
+          final decoded = jsonDecode(raw) as List;
+          _contacts = decoded.map((c) =>
+              Map<String, String>.from(c as Map)).toList();
+        }
+      } catch (_) {
+        _contacts = [];
+      }
     }
   }
 
@@ -70,8 +87,6 @@ class _FormulaireCreerTemoinScreenState
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
   }
-
-  // ── Android/iOS : image_picker ────────────────────────────────────────────
 
   Future<void> _pickImage() async {
     await Permission.photos.request();
@@ -122,6 +137,7 @@ class _FormulaireCreerTemoinScreenState
           departement:   _deptId,
           region:        _regionId,
           imgTemoin:     _imgPath,
+          contacts:      _contacts,
         );
       } else {
         await ConserveDataToSqlite.insertInfoPersoTemoin(
@@ -132,6 +148,7 @@ class _FormulaireCreerTemoinScreenState
           departement:   _deptId,
           region:        _regionId,
           imgTemoinPath: _imgPath,
+          contacts:      _contacts,
         );
       }
 
@@ -241,6 +258,15 @@ class _FormulaireCreerTemoinScreenState
               departementId: _deptId,
               onChanged:     (v) => setState(() => _regionId = v),
             ),
+            const SizedBox(height: 14),
+
+            // ── Contacts ─────────────────────────────────────────────────
+            ContactsField(
+              contacts:  _contacts,
+              onChanged: (updated) =>
+                  setState(() => _contacts = updated),
+            ),
+
             const SizedBox(height: 28),
 
             AjouterTemoinButton(

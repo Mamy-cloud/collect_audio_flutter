@@ -1,6 +1,6 @@
 // create_table_temoin.dart
-// Fichier unique — gestion complète de la base de données
 // Android/iOS → sqflite natif
+// Version 6 — ajout user_id dans info_perso_temoin
 
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -13,21 +13,18 @@ class CreateTableTemoin {
     return _db!;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // INITIALISATION
-  // ─────────────────────────────────────────────────────────────────────────
-
   static Future<void> init() async {
     final dbPath = await getDatabasesPath();
     final path   = join(dbPath, 'mon_app.db');
 
     _db = await openDatabase(
       path,
-      version: 3,
+      version: 6,
       onCreate: (db, version) async {
         await _createInfoPersoTemoin(db);
         await _createLoginUser(db);
         await _createCollectInfoFromTemoin(db);
+        await _insertTestUsers(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -38,15 +35,44 @@ class CreateTableTemoin {
           await _createLoginUser(db);
           await _createCollectInfoFromTemoin(db);
         }
+        if (oldVersion < 4) {
+          await db.execute(
+            "ALTER TABLE collect_info_from_temoin ADD COLUMN synced INTEGER NOT NULL DEFAULT 0",
+          );
+        }
+        if (oldVersion < 5) {
+          await db.execute(
+            "ALTER TABLE info_perso_temoin ADD COLUMN contacts TEXT NOT NULL DEFAULT '[]'",
+          );
+        }
+        if (oldVersion < 6) {
+          await db.execute(
+            "ALTER TABLE info_perso_temoin ADD COLUMN user_id TEXT",
+          );
+        }
       },
       onOpen: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
-        await db.execute('''
-          INSERT OR IGNORE INTO login_user (id, identifiant, password, created_at)
-          VALUES ('test', 'test', 'test', '2024-01-01T00:00:00.000')
-        ''');
+        await _insertTestUsers(db);
       },
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // UTILISATEURS DE TEST
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static Future<void> _insertTestUsers(Database db) async {
+    // Utilisateur 1 — login: user1 / code: 1234
+    await db.execute('''
+      INSERT OR IGNORE INTO login_user (id, identifiant, password, created_at)
+      VALUES ('user_id_001', 'user1', '1234', '2024-01-01T00:00:00.000')
+    ''');
+    // Utilisateur 2 — login: user2 / code: 5678
+    await db.execute('''
+      INSERT OR IGNORE INTO login_user (id, identifiant, password, created_at)
+      VALUES ('user_id_002', 'user2', '5678', '2024-01-01T00:00:00.000')
+    ''');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -57,13 +83,16 @@ class CreateTableTemoin {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS info_perso_temoin (
         id             TEXT PRIMARY KEY,
+        user_id        TEXT,
         nom            TEXT NOT NULL,
         prenom         TEXT NOT NULL,
         date_naissance TEXT,
         departement    TEXT,
         region         TEXT,
         img_temoin     TEXT,
-        date_creation  TEXT NOT NULL
+        contacts       TEXT NOT NULL DEFAULT '[]',
+        date_creation  TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES login_user(id)
       )
     ''');
   }
@@ -86,6 +115,7 @@ class CreateTableTemoin {
         user_id       TEXT NOT NULL,
         questionnaire TEXT NOT NULL DEFAULT '[]',
         url_audio     TEXT,
+        synced        INTEGER NOT NULL DEFAULT 0,
         created_at    TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES login_user(id)
       )
@@ -104,23 +134,6 @@ class CreateTableTemoin {
   // LOGIN USER — CRUD
   // ─────────────────────────────────────────────────────────────────────────
 
-  static Future<void> insertUser({
-    required String id,
-    required String identifiant,
-    required String password,
-  }) async {
-    await _db!.insert(
-      'login_user',
-      {
-        'id':          id,
-        'identifiant': identifiant,
-        'password':    password,
-        'created_at':  DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
   static Future<Map<String, dynamic>?> getUserByIdentifiant(
       String identifiant) async {
     final result = await _db!.query(
@@ -132,47 +145,14 @@ class CreateTableTemoin {
     return result.isNotEmpty ? result.first : null;
   }
 
-  static Future<Map<String, dynamic>?> getUserById(String id) async {
+  static Future<Map<String, dynamic>?> login(
+      String identifiant, String password) async {
     final result = await _db!.query(
       'login_user',
-      where:     'id = ?',
-      whereArgs: [id],
+      where:     'identifiant = ? AND password = ?',
+      whereArgs: [identifiant, password],
       limit:     1,
     );
     return result.isNotEmpty ? result.first : null;
-  }
-
-  static Future<Map<String, dynamic>?> getUserWithCollects(
-      String userId) async {
-    final userResult = await _db!.query(
-      'login_user',
-      where:     'id = ?',
-      whereArgs: [userId],
-      limit:     1,
-    );
-    if (userResult.isEmpty) return null;
-
-    final user     = Map<String, dynamic>.from(userResult.first);
-    final collects = await _db!.query(
-      'collect_info_from_temoin',
-      where:     'user_id = ?',
-      whereArgs: [userId],
-      orderBy:   'created_at DESC',
-    );
-    user['collect_info_from_temoin'] = collects;
-    return user;
-  }
-
-  static Future<void> deleteUser(String id) async {
-    await _db!.delete(
-      'collect_info_from_temoin',
-      where:     'user_id = ?',
-      whereArgs: [id],
-    );
-    await _db!.delete(
-      'login_user',
-      where:     'id = ?',
-      whereArgs: [id],
-    );
   }
 }

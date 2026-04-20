@@ -21,6 +21,24 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>Enregistrer des photos dans la galerie</string>
 
+	<!-- Accès Internet -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- Accès réseau local -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>L'application accède au réseau local pour synchroniser les données avec le serveur.</string>
+
+	<!-- Requis pour la découverte réseau local iOS 14+ -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+		<string>_https._tcp</string>
+	</array>
+
 
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>

@@ -9,7 +9,6 @@ const List<Map<String, dynamic>> kDepartements = [
 ];
 
 const List<Map<String, dynamic>> kRegions = [
-  // Corse-du-Sud
   {'id': 'reg_2A_01', 'departement_id': 'dept_2A', 'nom': 'Ajaccio'},
   {'id': 'reg_2A_02', 'departement_id': 'dept_2A', 'nom': 'Ajaccio — Gravona'},
   {'id': 'reg_2A_03', 'departement_id': 'dept_2A', 'nom': 'Ajaccio — Prunelli'},
@@ -42,7 +41,6 @@ const List<Map<String, dynamic>> kRegions = [
   {'id': 'reg_2A_30', 'departement_id': 'dept_2A', 'nom': 'Balagne Sud — Mela'},
   {'id': 'reg_2A_31', 'departement_id': 'dept_2A', 'nom': 'Balagne Sud — Zilia'},
   {'id': 'reg_2A_32', 'departement_id': 'dept_2A', 'nom': 'Balagne Sud — Montegrosso'},
-  // Haute-Corse
   {'id': 'reg_2B_01', 'departement_id': 'dept_2B', 'nom': 'Bastia'},
   {'id': 'reg_2B_02', 'departement_id': 'dept_2B', 'nom': 'Bastia — Cardo'},
   {'id': 'reg_2B_03', 'departement_id': 'dept_2B', 'nom': 'Bastia — Lupino'},
@@ -172,7 +170,7 @@ class RegionDropdown extends StatelessWidget {
         child: const Row(children: [
           Icon(Icons.info_outline, color: AppColors.textMuted, size: 16),
           SizedBox(width: 8),
-          Text('Sélectionnez d\'abord un département',
+          Text("Sélectionnez d'abord un département",
               style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
         ]),
       );
@@ -197,12 +195,154 @@ class RegionDropdown extends StatelessWidget {
   }
 }
 
+// ── Widget contacts ───────────────────────────────────────────────────────────
+
+class ContactsField extends StatefulWidget {
+  final List<Map<String, String>> contacts;
+  final void Function(List<Map<String, String>> contacts) onChanged;
+
+  const ContactsField({
+    super.key,
+    required this.contacts,
+    required this.onChanged,
+  });
+
+  @override
+  State<ContactsField> createState() => _ContactsFieldState();
+}
+
+class _ContactsFieldState extends State<ContactsField> {
+  final _nomCtrl = TextEditingController();
+  final _telCtrl = TextEditingController();
+
+  void _addContact() {
+    final nom = _nomCtrl.text.trim();
+    final tel = _telCtrl.text.trim();
+    if (nom.isEmpty) return;
+
+    final updated = List<Map<String, String>>.from(widget.contacts)
+      ..add({'nom': nom, 'telephone': tel});
+
+    widget.onChanged(updated);
+    _nomCtrl.clear();
+    _telCtrl.clear();
+  }
+
+  void _removeContact(int index) {
+    final updated = List<Map<String, String>>.from(widget.contacts)
+      ..removeAt(index);
+    widget.onChanged(updated);
+  }
+
+  @override
+  void dispose() {
+    _nomCtrl.dispose();
+    _telCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Contacts', style: AppTextStyles.label),
+        const SizedBox(height: 8),
+
+        // ── Liste des contacts ajoutés ────────────────────────────────────
+        if (widget.contacts.isNotEmpty) ...[
+          ...widget.contacts.asMap().entries.map((entry) {
+            final i = entry.key;
+            final c = entry.value;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color:        AppColors.inputFill,
+                borderRadius: BorderRadius.circular(10),
+                border:       Border.all(color: const Color(0xFF333333)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.person_outline,
+                      size: 16, color: AppColors.textMuted),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(c['nom'] ?? '',
+                            style: AppTextStyles.input
+                                .copyWith(fontSize: 14)),
+                        if ((c['telephone'] ?? '').isNotEmpty)
+                          Text(c['telephone']!,
+                              style: AppTextStyles.label
+                                  .copyWith(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => _removeContact(i),
+                    child: const Icon(Icons.close,
+                        size: 16, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+        ],
+
+        // ── Formulaire ajout contact ──────────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _nomCtrl,
+                style:      AppTextStyles.input,
+                decoration: AppInputDecoration.of(
+                    'Nom du contact', hint: 'ex. Marie'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _telCtrl,
+                style:      AppTextStyles.input,
+                keyboardType: TextInputType.phone,
+                decoration: AppInputDecoration.of(
+                    'Tél.', hint: '06...'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _addContact,
+              child: Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color:        AppColors.buttonBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add,
+                    color: AppColors.background, size: 20),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 // ── Bouton Ajouter / Modifier ─────────────────────────────────────────────────
 
 class AjouterTemoinButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool          isLoading;
-  final String?       label; // null = "Ajouter" par défaut
+  final String?       label;
 
   const AjouterTemoinButton({
     super.key,
@@ -224,10 +364,7 @@ class AjouterTemoinButton extends StatelessWidget {
                 width: 20, height: 20,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: Colors.black))
-            : Text(
-                label ?? 'Ajouter',
-                style: AppTextStyles.button,
-              ),
+            : Text(label ?? 'Ajouter', style: AppTextStyles.button),
       ),
     );
   }

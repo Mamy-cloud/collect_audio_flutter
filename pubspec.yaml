@@ -35,7 +35,10 @@ dependencies:
   # Appels API REST
   http: ^1.2.0
 
-  # Préférences locales
+  # Détection connexion réseau
+  connectivity_plus: ^6.0.0
+
+  # Préférences locale
   shared_preferences: ^2.2.0
 
 dev_dependencies:

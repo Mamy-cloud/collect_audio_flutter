@@ -10,6 +10,7 @@ class SaveQuestionnaire {
     required String       userId,
     required String       temoinId,
     String?               accompagnant,
+    String?               contact,
     String?               lieu,
     String?               periodeEvoquee,
     required List<String> themes,
@@ -22,6 +23,7 @@ class SaveQuestionnaire {
     final questionnaire = [
       {'champ': 'temoin_id',       'valeur': temoinId},
       {'champ': 'accompagnant',    'valeur': accompagnant   ?? ''},
+      {'champ': 'contact',         'valeur': contact        ?? ''},
       {'champ': 'lieu',            'valeur': lieu           ?? ''},
       {'champ': 'periode_evoquee', 'valeur': periodeEvoquee ?? ''},
       {'champ': 'themes',          'valeur': themes.join(',')},

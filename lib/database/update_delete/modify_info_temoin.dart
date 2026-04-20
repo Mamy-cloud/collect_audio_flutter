@@ -1,12 +1,7 @@
-// modify_info_temoin.dart
-// Modification et suppression d'un témoin dans info_perso_temoin
-
 import 'dart:convert';
 import '../create_table/create_table_temoin.dart';
 
 class ModifyInfoTemoin {
-
-  // ── Modifier les infos d'un témoin ────────────────────────────────────────
 
   static Future<void> update({
     required String  id,
@@ -16,9 +11,9 @@ class ModifyInfoTemoin {
     String?          departement,
     String?          region,
     String?          imgTemoin,
+    List<Map<String, String>>? contacts,
   }) async {
     final db = CreateTableTemoin.db;
-
     await db.update(
       'info_perso_temoin',
       {
@@ -28,19 +23,16 @@ class ModifyInfoTemoin {
         'departement':    departement,
         'region':         region,
         'img_temoin':     imgTemoin,
+        'contacts':       jsonEncode(contacts ?? []),
       },
       where:     'id = ?',
       whereArgs: [id],
     );
   }
 
-  // ── Supprimer un témoin et toutes ses collectes associées ─────────────────
-  // Filtrage côté Dart pour éviter json_extract (non supporté sur Android ancien)
-
   static Future<void> delete(String id) async {
     final db = CreateTableTemoin.db;
 
-    // Récupère toutes les collectes et filtre en Dart
     final allCollectes = await db.query('collect_info_from_temoin');
     final collectesLiees = <String>[];
 
@@ -55,7 +47,6 @@ class ModifyInfoTemoin {
       } catch (_) {}
     }
 
-    // Suppression des tables liées
     for (final collectId in collectesLiees) {
       await db.delete(
         'info_perso_temoin_collect',
@@ -69,7 +60,6 @@ class ModifyInfoTemoin {
       );
     }
 
-    // Suppression du témoin
     await db.delete(
       'info_perso_temoin',
       where:     'id = ?',

@@ -3,6 +3,8 @@ import '../screens/login_screen.dart';
 import '../screens/list_temoin_screen.dart';
 import '../screens/questionnaire_screen.dart';
 import '../screens/save_local_detail_screen.dart';
+import '../screens/transfert_data_to_cloud_screen.dart';
+import '../screens/setting_screen.dart';
 import '../notifications_screens/notification_addtemoin_screen.dart';
 import '../notifications_screens/notification_save_collect_info_temoin_screen.dart';
 import '../notifications_screens/notification_update_delete.dart';
@@ -80,6 +82,14 @@ final router = GoRouter(
         GoRoute(
           path:    '/questionnaire',
           builder: (_, __) => const QuestionnaireScreen(),
+        ),
+        GoRoute(
+          path:    '/transfert',
+          builder: (_, __) => const TransfertDataToCloudScreen(),
+        ),
+        GoRoute(
+          path:    '/settings',
+          builder: (_, __) => const SettingScreen(),
         ),
       ],
     ),
