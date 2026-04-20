@@ -1,9 +1,9 @@
-// setting_screen.dart
 import 'package:flutter/material.dart';
-import '../../../services/session_service.dart';
-import '../../../services/session_deconnexion.dart';
-import '../../../widgets/global/app_styles.dart';
-import '../../../widgets/screens_widgets/setting_widget.dart';
+import 'package:go_router/go_router.dart';
+import '../services/session_service.dart';
+import '../services/session_deconnexion.dart';
+import '../widgets/global/app_styles.dart';
+import '../widgets/screens_widgets/setting_widget.dart';
 
 class SettingScreen extends StatelessWidget {
   const SettingScreen({super.key});
@@ -37,21 +37,6 @@ class SettingScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            // ── Section Compte ─────────────────────────────────────────────
-            const SettingSectionTitle(text: 'Compte'),
-            const SizedBox(height: 8),
-
-            SettingTile(
-              icon:       Icons.person_outline,
-              label:      identifiant,
-              subtitle:   'Utilisateur connecté',
-              iconColor:  AppColors.textMuted,
-              onTap:      () {},
-              trailing:   const SizedBox.shrink(),
-            ),
-
-            const SizedBox(height: 32),
-
             // ── Section Application ────────────────────────────────────────
             const SettingSectionTitle(text: 'Application'),
             const SizedBox(height: 8),
@@ -61,7 +46,7 @@ class SettingScreen extends StatelessWidget {
               label:     'Synchronisation Cloud',
               subtitle:  'Transférer vers Supabase',
               iconColor: const Color(0xFF7986CB),
-              onTap:     () {},
+              onTap:     () => context.go('/transfert'),
             ),
 
             const SizedBox(height: 8),

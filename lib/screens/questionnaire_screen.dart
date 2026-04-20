@@ -192,10 +192,6 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
 
-                  // ── Qui ? ───────────────────────────────────────────────
-                  _SectionTitle('Qui ?'),
-                  const SizedBox(height: 10),
-
                   if (_temoinSelectionne == null)
                     TemoinSearchBar(
                       results:    _searchResults,

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -99,6 +100,19 @@ class InfoPersoCard extends StatelessWidget {
   final Map<String, dynamic> temoin;
   const InfoPersoCard({super.key, required this.temoin});
 
+  List<Map<String, String>> _getContacts() {
+    try {
+      final raw = temoin['contacts'];
+      if (raw is List) {
+        return raw.map((c) => Map<String, String>.from(c as Map)).toList();
+      } else if (raw is String && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw) as List;
+        return decoded.map((c) => Map<String, String>.from(c as Map)).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
   void _showOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -187,9 +201,10 @@ class InfoPersoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p       = temoin['prenom'] as String? ?? '?';
-    final n       = temoin['nom'] as String? ?? '?';
-    final imgPath = temoin['img_temoin'] as String?;
+    final p        = temoin['prenom'] as String? ?? '?';
+    final n        = temoin['nom'] as String? ?? '?';
+    final imgPath  = temoin['img_temoin'] as String?;
+    final contacts = _getContacts();
 
     return Container(
       decoration: BoxDecoration(
@@ -218,9 +233,9 @@ class InfoPersoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── Avatar + nom ───────────────────────────────────────────
                 Row(
                   children: [
-                    // ── Avatar — Image.file pour chemin local ────────────
                     Container(
                       width: 52, height: 52,
                       decoration: BoxDecoration(
@@ -230,12 +245,8 @@ class InfoPersoCard extends StatelessWidget {
                       ),
                       child: imgPath != null && File(imgPath).existsSync()
                           ? ClipOval(
-                              child: Image.file(
-                                File(imgPath),
-                                fit: BoxFit.cover,
-                                width: 52, height: 52,
-                              ),
-                            )
+                              child: Image.file(File(imgPath),
+                                  fit: BoxFit.cover, width: 52, height: 52))
                           : Center(
                               child: Text(
                                 '${p[0].toUpperCase()}${n[0].toUpperCase()}',
@@ -260,6 +271,8 @@ class InfoPersoCard extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // ── Localisation ───────────────────────────────────────────
                 if (temoin['departement'] != null ||
                     temoin['region'] != null) ...[
                   const SizedBox(height: 14),
@@ -270,14 +283,48 @@ class InfoPersoCard extends StatelessWidget {
                       const Icon(Icons.location_on_outlined,
                           size: 15, color: AppColors.textMuted),
                       const SizedBox(width: 6),
-                      Text(
-                        [temoin['departement'], temoin['region']]
-                            .where((v) => v != null)
-                            .join(', '),
-                        style: AppTextStyles.label,
+                      Expanded(
+                        child: Text(
+                          [temoin['departement'], temoin['region']]
+                              .where((v) => v != null)
+                              .join(', '),
+                          style: AppTextStyles.label,
+                        ),
                       ),
                     ],
                   ),
+                ],
+
+                // ── Contacts ───────────────────────────────────────────────
+                if (contacts.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, color: Color(0xFF333333)),
+                  const SizedBox(height: 12),
+                  Text('Contacts',
+                      style: AppTextStyles.label.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.8)),
+                  const SizedBox(height: 8),
+                  ...contacts.map((c) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_outline,
+                            size: 14, color: AppColors.textMuted),
+                        const SizedBox(width: 8),
+                        Text(c['nom'] ?? '',
+                            style: AppTextStyles.input
+                                .copyWith(fontSize: 13)),
+                        if ((c['telephone'] ?? '').isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Text('·  ${c['telephone']}',
+                              style: AppTextStyles.label
+                                  .copyWith(fontSize: 12)),
+                        ],
+                      ],
+                    ),
+                  )),
                 ],
               ],
             ),
@@ -396,14 +443,15 @@ class CollecteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final q      = collecte['questionnaire'] as List<dynamic>? ?? [];
-    final lieu   = _val(q, 'lieu');
-    final period = _val(q, 'periode_evoquee');
-    final themes = _val(q, 'themes');
-    final sujet  = _val(q, 'sujet_du_jour');
-    final accomp = _val(q, 'accompagnant');
-    final date   = (collecte['created_at'] as String? ?? '').split('T').first;
-    final audio  = collecte['url_audio'] as String?;
+    final q       = collecte['questionnaire'] as List<dynamic>? ?? [];
+    final lieu    = _val(q, 'lieu');
+    final period  = _val(q, 'periode_evoquee');
+    final themes  = _val(q, 'themes');
+    final sujet   = _val(q, 'sujet_du_jour');
+    final accomp  = _val(q, 'accompagnant');
+    final contact = _val(q, 'contact');   // ← contact du questionnaire
+    final date    = (collecte['created_at'] as String? ?? '').split('T').first;
+    final audio   = collecte['url_audio'] as String?;
 
     return GestureDetector(
       onTap: () => showModalBottomSheet(
@@ -441,12 +489,26 @@ class CollecteCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Date ──────────────────────────────────────────────
                   Row(
                     children: [
                       const Icon(Icons.calendar_today_outlined,
                           size: 13, color: AppColors.textMuted),
                       const SizedBox(width: 6),
                       Text(date, style: AppTextStyles.label),
+                      // ── Contact présent ──────────────────────────────
+                      if (contact.isNotEmpty) ...[
+                        const SizedBox(width: 12),
+                        const Text('·',
+                            style: TextStyle(color: AppColors.textMuted)),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.person_outline,
+                            size: 13, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Text(contact,
+                            style: AppTextStyles.label
+                                .copyWith(fontSize: 12)),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -476,7 +538,8 @@ class CollecteCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(t.trim(),
-                            style: AppTextStyles.label.copyWith(fontSize: 11)),
+                            style: AppTextStyles.label
+                                .copyWith(fontSize: 11)),
                       )).toList(),
                     ),
                   ],
@@ -491,7 +554,8 @@ class CollecteCard extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(audio,
-                              style: AppTextStyles.label.copyWith(fontSize: 11),
+                              style: AppTextStyles.label
+                                  .copyWith(fontSize: 11),
                               overflow: TextOverflow.ellipsis),
                         ),
                       ],
