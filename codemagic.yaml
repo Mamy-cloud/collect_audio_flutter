@@ -18,6 +18,9 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
+      - name: Vérifier version record
+        script: flutter pub deps | grep record
+
       - name: Flutter analyze
         script: flutter analyze --no-fatal-infos
 

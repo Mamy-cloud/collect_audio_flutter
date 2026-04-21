@@ -21,8 +21,8 @@ dependencies:
   # Lecture audio
   audioplayers: ^6.0.0
 
-  # Enregistrement audio avec choix du micro
-  record:             ^5.1.2
+  # Enregistrement audio — version fixée pour éviter conflit record_linux
+  record:             ^5.0.0
   permission_handler: ^11.0.0
 
   # UUID
@@ -33,8 +33,8 @@ dependencies:
   path_provider: ^2.1.0
 
   # Réseau
-  http:               ^1.2.0
-  connectivity_plus:  ^6.0.0
+  http:              ^1.2.0
+  connectivity_plus: ^6.0.0
 
   # Préférences locales
   shared_preferences: ^2.2.0
