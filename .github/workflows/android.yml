@@ -1,0 +1,55 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ── 1. Checkout du code ──────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Java 17 ───────────────────────────────────────────────────────
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ── 3. Flutter stable ────────────────────────────────────────────────
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+          channel: stable
+          cache: true
+
+      # ── 4. Dépendances ───────────────────────────────────────────────────
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # ── 5. Analyse ───────────────────────────────────────────────────────
+      - name: Flutter analyze
+        run: flutter analyze --no-fatal-infos
+
+      # ── 6. Build APK debug (sans signature) ──────────────────────────────
+      - name: Build APK debug
+        run: |
+          flutter build apk --debug \
+            --split-per-abi \
+            --build-number=${{ github.run_number }}
+
+      # ── 7. Upload APK debug ───────────────────────────────────────────────
+      - name: Upload APK debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+          retention-days: 7
