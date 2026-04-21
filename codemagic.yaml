@@ -16,7 +16,7 @@ workflows:
 
     scripts:
       - name: Copier pubspec Android
-        script: cp pubspec_android.yaml pubspec.yaml
+        script: cp pubspec.yaml
 
       - name: Flutter pub get
         script: flutter pub get
