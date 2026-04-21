@@ -1,6 +1,6 @@
 // create_table_temoin.dart
 // Android/iOS → sqflite natif
-// Version 6 — ajout user_id dans info_perso_temoin
+// Version 6. — ajout user_id dans info_perso_temoin
 
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
