@@ -26,29 +26,33 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # ── 3. Flutter ───────────────────────────────────────────────────────
+      # ── 3. Flutter — installation manuelle ───────────────────────────────
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+        run: |
+          git clone https://github.com/flutter/flutter.git \
+            --depth 1 --branch stable $HOME/flutter
+          echo "$HOME/flutter/bin" >> $GITHUB_PATH
 
-      # ── 4. Dépendances ───────────────────────────────────────────────────
+      # ── 4. Vérifier Flutter ───────────────────────────────────────────────
+      - name: Flutter version
+        run: flutter --version
+
+      # ── 5. Dépendances ───────────────────────────────────────────────────
       - name: Flutter pub get
         run: flutter pub get
 
-      # ── 5. Analyse ───────────────────────────────────────────────────────
+      # ── 6. Analyse ───────────────────────────────────────────────────────
       - name: Flutter analyze
         run: flutter analyze --no-fatal-infos
 
-      # ── 6. Build APK debug ────────────────────────────────────────────────
+      # ── 7. Build APK debug ────────────────────────────────────────────────
       - name: Build APK debug
         run: |
           flutter build apk --debug \
             --split-per-abi \
             --build-number=${{ github.run_number }}
 
-      # ── 7. Upload APK ─────────────────────────────────────────────────────
+      # ── 8. Upload APK ─────────────────────────────────────────────────────
       - name: Upload APK debug
         uses: actions/upload-artifact@v4
         with:
