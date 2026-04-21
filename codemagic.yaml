@@ -24,23 +24,16 @@ workflows:
       - name: Flutter analyze
         script: flutter analyze --no-fatal-infos
 
-      - name: Build APK debug
-        script: |
-          flutter build apk --debug \
-            --build-name=1.0.0 \
-            --build-number=$BUILD_NUMBER
-
-      - name: Build APK release
+      - name: Build APK
         script: |
           echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
           flutter build apk --release \
+            --split-per-abi \
             --build-name=1.0.0 \
-            --build-number=$BUILD_NUMBER \
-            --dart-define=ENV=production
+            --build-number=$BUILD_NUMBER
 
     artifacts:
-      - build/app/outputs/flutter-apk/app-debug.apk
-      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 
     publishing:
       email:
@@ -49,34 +42,3 @@ workflows:
         notify:
           success: true
           failure: true
-
-  android-debug:
-    name: Android Debug
-    max_build_duration: 30
-    environment:
-      flutter: stable
-      java: 17
-
-    scripts:
-      - name: Copier pubspec Android
-        script: cp pubspec_android.yaml pubspec.yaml
-
-      - name: Flutter pub get
-        script: flutter pub get
-
-      - name: Build APK debug
-        script: |
-          flutter build apk --debug \
-            --build-name=1.0.0 \
-            --build-number=$BUILD_NUMBER
-
-    artifacts:
-      - build/app/outputs/flutter-apk/app-debug.apk
-
-    publishing:
-      email:
-        recipients:
-          - ton@email.com
-        notify:
-          success: true
-          failure: false
