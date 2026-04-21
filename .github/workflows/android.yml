@@ -15,44 +15,33 @@ jobs:
 
     steps:
 
-      # ── 1. Checkout ──────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. Java 17 ───────────────────────────────────────────────────────
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      # ── 3. Flutter — installation manuelle ───────────────────────────────
       - name: Setup Flutter
-        run: |
-          git clone https://github.com/flutter/flutter.git \
-            --depth 1 --branch stable $HOME/flutter
-          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          cache: true
 
-      # ── 4. Vérifier Flutter ───────────────────────────────────────────────
-      - name: Flutter version
-        run: flutter --version
-
-      # ── 5. Dépendances ───────────────────────────────────────────────────
       - name: Flutter pub get
         run: flutter pub get
 
-      # ── 6. Analyse ───────────────────────────────────────────────────────
       - name: Flutter analyze
         run: flutter analyze --no-fatal-infos
 
-      # ── 7. Build APK debug ────────────────────────────────────────────────
       - name: Build APK debug
         run: |
           flutter build apk --debug \
             --split-per-abi \
             --build-number=${{ github.run_number }}
 
-      # ── 8. Upload APK ─────────────────────────────────────────────────────
       - name: Upload APK debug
         uses: actions/upload-artifact@v4
         with:
