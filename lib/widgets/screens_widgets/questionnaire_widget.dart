@@ -1,5 +1,5 @@
-/// questionnaire_widget.dart
-/// Widgets du formulaire questionnaire de contexte
+// questionnaire_widget.dart
+// Widgets du formulaire questionnaire de contexte
 
 import 'package:flutter/material.dart';
 import '../global/app_styles.dart';

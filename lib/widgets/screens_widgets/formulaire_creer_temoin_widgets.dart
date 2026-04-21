@@ -129,7 +129,7 @@ class DepartementDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue:  value,
+      value:         value,
       onChanged:     onChanged,
       dropdownColor: AppColors.surface,
       style:         AppTextStyles.input,
@@ -181,7 +181,7 @@ class RegionDropdown extends StatelessWidget {
         .toList();
 
     return DropdownButtonFormField<String>(
-      initialValue:  value,
+      value:         value,
       onChanged:     onChanged,
       dropdownColor: AppColors.surface,
       style:         AppTextStyles.input,
