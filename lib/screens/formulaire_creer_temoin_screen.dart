@@ -25,8 +25,10 @@ class _FormulaireCreerTemoinScreenState
   final _prenomCtrl = TextEditingController();
   final _dateCtrl   = TextEditingController();
 
-  String? _deptId;
-  String? _regionId;
+  String? _deptId;    // id pour le dropdown
+  String? _regionId;   // id pour le dropdown
+  String? _deptNom;   // nom réel sauvegardé
+  String? _regionNom; // nom réel sauvegardé
   String? _imgPath;
   bool    _isLoading = false;
   List<Map<String, String>> _contacts = [];
@@ -41,8 +43,24 @@ class _FormulaireCreerTemoinScreenState
       _nomCtrl.text    = t['nom']            as String? ?? '';
       _prenomCtrl.text = t['prenom']         as String? ?? '';
       _dateCtrl.text   = t['date_naissance'] as String? ?? '';
-      _deptId          = t['departement']    as String?;
-      _regionId        = t['region']         as String?;
+      // En mode édition les valeurs stockées sont déjà des noms
+      // On cherche l'id correspondant pour le dropdown
+      final deptNom   = t['departement'] as String?;
+      final regionNom = t['region']      as String?;
+      _deptNom   = deptNom;
+      _regionNom = regionNom;
+      _deptId    = deptNom != null
+          ? kDepartements.firstWhere(
+              (d) => d['nom'] == deptNom,
+              orElse: () => {'id': deptNom},
+            )['id'] as String?
+          : null;
+      _regionId  = regionNom != null
+          ? kRegions.firstWhere(
+              (r) => r['nom'] == regionNom,
+              orElse: () => {'id': regionNom},
+            )['id'] as String?
+          : null;
       _imgPath         = t['img_temoin']     as String?;
 
       // Charger les contacts existants
@@ -63,7 +81,18 @@ class _FormulaireCreerTemoinScreenState
   }
 
   void _onDeptChanged(String? id) {
-    setState(() { _deptId = id; _regionId = null; });
+    final nom = id != null
+        ? kDepartements.firstWhere(
+            (d) => d['id'] == id,
+            orElse: () => {'nom': id},
+          )['nom'] as String?
+        : null;
+    setState(() {
+      _deptId    = id;
+      _deptNom   = nom;
+      _regionId  = null;
+      _regionNom = null;
+    });
   }
 
   Future<void> _pickDate() async {
@@ -134,8 +163,8 @@ class _FormulaireCreerTemoinScreenState
           prenom:        prenom,
           dateNaissance: _dateCtrl.text.trim().isEmpty
                              ? null : _dateCtrl.text.trim(),
-          departement:   _deptId,
-          region:        _regionId,
+          departement:   _deptNom,
+          region:        _regionNom,
           imgTemoin:     _imgPath,
           contacts:      _contacts,
         );
@@ -145,8 +174,8 @@ class _FormulaireCreerTemoinScreenState
           prenom:        prenom,
           dateNaissance: _dateCtrl.text.trim().isEmpty
                              ? null : _dateCtrl.text.trim(),
-          departement:   _deptId,
-          region:        _regionId,
+          departement:   _deptNom,
+          region:        _regionNom,
           imgTemoinPath: _imgPath,
           contacts:      _contacts,
         );
@@ -256,7 +285,18 @@ class _FormulaireCreerTemoinScreenState
             RegionDropdown(
               value:         _regionId,
               departementId: _deptId,
-              onChanged:     (v) => setState(() => _regionId = v),
+              onChanged:     (v) {
+                final nom = v != null
+                    ? kRegions.firstWhere(
+                        (r) => r['id'] == v,
+                        orElse: () => {'nom': v},
+                      )['nom'] as String?
+                    : null;
+                setState(() {
+                  _regionId  = v;
+                  _regionNom = nom;
+                });
+              },
             ),
             const SizedBox(height: 14),
 

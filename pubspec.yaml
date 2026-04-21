@@ -18,27 +18,25 @@ dependencies:
   sqflite: ^2.3.0
   path:    ^1.9.0
 
-  # Lecture audio — compatible Android/iOS
+  # Lecture audio
   audioplayers: ^6.0.0
 
-  # Enregistrement audio — Android/iOS
-  flutter_sound:      ^9.0.0
+  # Enregistrement audio avec choix du micro
+  record:             ^5.1.2
   permission_handler: ^11.0.0
 
-  # UUID pour les clés primaires
+  # UUID
   uuid: ^4.4.0
 
-  # Image — Android/iOS
+  # Image
   image_picker:  ^1.0.0
   path_provider: ^2.1.0
 
-  # Appels API REST
-  http: ^1.2.0
+  # Réseau
+  http:               ^1.2.0
+  connectivity_plus:  ^6.0.0
 
-  # Détection connexion réseau
-  connectivity_plus: ^6.0.0
-
-  # Préférences locale
+  # Préférences locales
   shared_preferences: ^2.2.0
 
 dev_dependencies:

@@ -18,8 +18,8 @@ class QuestionnaireScreen extends StatefulWidget {
 class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
   Map<String, dynamic>?       _temoinSelectionne;
-  List<Map<String, dynamic>>  _searchResults = [];
-  String?                     _contactSelectionne; // nom du contact sélectionné
+  List<Map<String, dynamic>>  _temoins = [];         // liste complète
+  String?                     _contactSelectionne;
 
   final _accompagnantCtrl = TextEditingController();
   final _sujetCtrl        = TextEditingController();
@@ -28,6 +28,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   String?      _periodeEvoquee;
   List<String> _themes = [];
   bool         _isLoading = false;
+  bool         _loadingTemoins = true;
 
   static const _lieuxOptions = [
     'Domicile', 'EHPAD', 'Extérieur', 'Cuisine de la ferme', 'Autre',
@@ -51,42 +52,40 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     return [];
   }
 
-  // ── Recherche témoin ───────────────────────────────────────────────────────
+  // ── Chargement de tous les témoins ───────────────────────────────────────
 
-  Future<void> _searchTemoin(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() { _searchResults = []; });
-      return;
-    }
-
-    final db      = CreateTableTemoin.db;
-    final results = await db.query(
-      'info_perso_temoin',
-      where:     'LOWER(nom) LIKE ? OR LOWER(prenom) LIKE ?',
-      whereArgs: ['%${query.toLowerCase()}%', '%${query.toLowerCase()}%'],
-      limit:     5,
-    );
-
-    // Décoder les contacts pour chaque résultat
-    setState(() {
-      _searchResults = results.map((row) {
-        final r = Map<String, dynamic>.from(row);
-        try {
-          r['contacts'] = jsonDecode(r['contacts'] as String? ?? '[]');
-        } catch (_) {
-          r['contacts'] = [];
-        }
-        return r;
-      }).toList();
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadTemoins();
   }
 
-  void _selectTemoin(Map<String, dynamic> t) {
-    setState(() {
-      _temoinSelectionne  = t;
-      _searchResults      = [];
-      _contactSelectionne = null; // reset contact quand témoin change
-    });
+  Future<void> _loadTemoins() async {
+    final userId = SessionService.currentUserId;
+    final db     = CreateTableTemoin.db;
+    final rows   = await db.query(
+      'info_perso_temoin',
+      where:     userId != null ? 'user_id = ?' : null,
+      whereArgs: userId != null ? [userId] : null,
+      orderBy:   'nom ASC',
+    );
+
+    final temoins = rows.map((row) {
+      final r = Map<String, dynamic>.from(row);
+      try {
+        r['contacts'] = jsonDecode(r['contacts'] as String? ?? '[]');
+      } catch (_) {
+        r['contacts'] = [];
+      }
+      return r;
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _temoins        = temoins;
+        _loadingTemoins = false;
+      });
+    }
   }
 
   // ── Audio ──────────────────────────────────────────────────────────────────
@@ -145,7 +144,6 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   void _reset() {
     setState(() {
       _temoinSelectionne  = null;
-      _searchResults      = [];
       _contactSelectionne = null;
       _lieu               = null;
       _periodeEvoquee     = null;
@@ -192,20 +190,22 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
 
-                  if (_temoinSelectionne == null)
-                    TemoinSearchBar(
-                      results:    _searchResults,
-                      onSearch:   _searchTemoin,
-                      onSelected: _selectTemoin,
-                    )
-                  else
-                    TemoinSelectedChip(
-                      label: '${_temoinSelectionne!['prenom']} ${_temoinSelectionne!['nom']}',
-                      onRemove: () => setState(() {
-                        _temoinSelectionne  = null;
-                        _contactSelectionne = null;
-                      }),
-                    ),
+                  _loadingTemoins
+                    ? const SizedBox(
+                        height: 52,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.textMuted),
+                        ),
+                      )
+                    : TemoinDropdown(
+                        temoins:   _temoins,
+                        selected:  _temoinSelectionne,
+                        onChanged: (t) => setState(() {
+                          _temoinSelectionne  = t;
+                          _contactSelectionne = null;
+                        }),
+                      ),
 
                   const SizedBox(height: 14),
 

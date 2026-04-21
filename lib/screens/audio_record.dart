@@ -1,13 +1,12 @@
 // audio_record.dart — VERSION ANDROID/iOS
-// Utilise flutter_sound pour l'enregistrement
-// Pour Linux : utiliser audio_record_linux.dart avec ffmpeg
+// Utilise le package 'record' pour l'enregistrement avec choix du micro
 
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:flutter_sound/flutter_sound.dart';
+import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../widgets/global/app_styles.dart';
 
@@ -20,44 +19,57 @@ class AudioRecordSheet extends StatefulWidget {
 }
 
 class _AudioRecordSheetState extends State<AudioRecordSheet> {
-  _Status               _status       = _Status.idle;
-  Duration              _elapsed      = Duration.zero;
-  Timer?                _timer;
-  String?               _finalPath;
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  bool                  _recorderOpen = false;
+  _Status              _status       = _Status.idle;
+  Duration             _elapsed      = Duration.zero;
+  Timer?               _timer;
+  String?              _finalPath;
+  final AudioRecorder  _recorder     = AudioRecorder();
 
-  // ─── Initialisation ────────────────────────────────────────────────────────
+  // ── Appareils audio ────────────────────────────────────────────────────────
+  List<InputDevice> _devices        = [];
+  InputDevice?      _selectedDevice;
+  bool              _loadingDevices = true;
 
-  Future<void> _openRecorder() async {
-    if (!_recorderOpen) {
-      final status = await Permission.microphone.request();
-      if (!status.isGranted) {
-        throw Exception('Permission microphone refusée');
-      }
-      await _recorder.openRecorder();
-      _recorderOpen = true;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadDevices();
   }
 
-  // ─── Chemins ───────────────────────────────────────────────────────────────
+  Future<void> _loadDevices() async {
+    try {
+      await Permission.microphone.request();
+      final devices = await _recorder.listInputDevices();
+      if (mounted) {
+        setState(() {
+          _devices        = devices;
+          _selectedDevice = devices.isNotEmpty ? devices.first : null;
+          _loadingDevices = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingDevices = false);
+    }
+  }
 
   Future<String> _newPath() async {
     final dir = await getApplicationDocumentsDirectory();
     return p.join(dir.path,
-        'temoignage_${DateTime.now().millisecondsSinceEpoch}.aac');
+        'temoignage_${DateTime.now().millisecondsSinceEpoch}.m4a');
   }
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
   Future<void> _startRecording() async {
-    await _openRecorder();
     _elapsed   = Duration.zero;
     _finalPath = await _newPath();
 
-    await _recorder.startRecorder(
-      toFile: _finalPath,
-      codec:  Codec.aacADTS,
+    await _recorder.start(
+      RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        device:  _selectedDevice,
+      ),
+      path: _finalPath!,
     );
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -68,12 +80,12 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
 
   Future<void> _pauseRecording() async {
     _timer?.cancel();
-    await _recorder.pauseRecorder();
+    await _recorder.pause();
     setState(() => _status = _Status.paused);
   }
 
   Future<void> _resumeRecording() async {
-    await _recorder.resumeRecorder();
+    await _recorder.resume();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _elapsed += const Duration(seconds: 1));
     });
@@ -82,7 +94,7 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
 
   Future<void> _stopRecording() async {
     _timer?.cancel();
-    await _recorder.stopRecorder();
+    await _recorder.stop();
     setState(() => _status = _Status.done);
   }
 
@@ -114,11 +126,9 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
   @override
   void dispose() {
     _timer?.cancel();
-    if (_recorderOpen) _recorder.closeRecorder();
+    _recorder.dispose();
     super.dispose();
   }
-
-  // ─── UI ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -140,12 +150,21 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
                   borderRadius: BorderRadius.circular(2)),
             ),
           ),
+
           const Text('Témoignage oral',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary)),
-          const SizedBox(height: 32),
+
+          const SizedBox(height: 20),
+
+          // ── Sélecteur de micro ─────────────────────────────────────────
+          _buildDeviceSelector(),
+
+          const SizedBox(height: 24),
+
           _Magnetophone(status: _status, elapsedLabel: _elapsedLabel),
-          const SizedBox(height: 32),
+
+          const SizedBox(height: 24),
 
           if (_status == _Status.idle)
             _CtrlButton(
@@ -173,10 +192,10 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
 
           if (_status == _Status.done) ...[
             _CtrlButton(
-              icon: Icons.save_alt,
-              label: 'Enregistrer le témoignage',
-              color: AppColors.textPrimary,
-              onTap: _saveTestimony,
+              icon:   Icons.save_alt,
+              label:  'Enregistrer le témoignage',
+              color:  AppColors.textPrimary,
+              onTap:  _saveTestimony,
               filled: true,
             ),
             const SizedBox(height: 12),
@@ -188,6 +207,72 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
                   style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceSelector() {
+    if (_loadingDevices) {
+      return const SizedBox(
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 16, height: 16,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: AppColors.textMuted),
+          ),
+        ),
+      );
+    }
+
+    if (_devices.length <= 1) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color:        AppColors.inputFill,
+        borderRadius: BorderRadius.circular(10),
+        border:       Border.all(color: const Color(0xFF333333)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.mic_outlined, size: 16, color: AppColors.textMuted),
+          const SizedBox(width: 10),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<InputDevice>(
+                value:         _selectedDevice,
+                dropdownColor: AppColors.inputFill,
+                style:         AppTextStyles.input.copyWith(fontSize: 14),
+                icon: const Icon(Icons.keyboard_arrow_down,
+                    color: AppColors.textMuted, size: 18),
+                isExpanded: true,
+                items: _devices.map((d) => DropdownMenuItem<InputDevice>(
+                  value: d,
+                  child: Row(
+                    children: [
+                      Icon(
+                        d.label.toLowerCase().contains('usb')
+                            ? Icons.usb_outlined
+                            : Icons.mic_outlined,
+                        size:  14,
+                        color: AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(d.label,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+                onChanged: _status == _Status.idle
+                    ? (d) => setState(() => _selectedDevice = d)
+                    : null,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -207,9 +292,9 @@ class _Magnetophone extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
       decoration: BoxDecoration(
-        color: AppColors.inputFill,
+        color:        AppColors.inputFill,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF333333)),
+        border:       Border.all(color: const Color(0xFF333333)),
       ),
       child: Column(
         children: [
@@ -247,8 +332,9 @@ class _Magnetophone extends StatelessWidget {
           const SizedBox(height: 20),
           Text(elapsedLabel,
               style: const TextStyle(
-                fontSize: 36, fontWeight: FontWeight.w300,
-                color: AppColors.textPrimary,
+                fontSize:     36,
+                fontWeight:   FontWeight.w300,
+                color:        AppColors.textPrimary,
                 fontFeatures: [FontFeature.tabularFigures()],
               )),
           const SizedBox(height: 8),
@@ -271,8 +357,6 @@ class _Magnetophone extends StatelessWidget {
     }
   }
 }
-
-// ── Bouton de contrôle ─────────────────────────────────────────────────────────
 
 class _CtrlButton extends StatelessWidget {
   final IconData icon; final String label;

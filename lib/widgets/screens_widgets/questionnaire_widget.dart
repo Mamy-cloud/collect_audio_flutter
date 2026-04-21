@@ -4,29 +4,19 @@
 import 'package:flutter/material.dart';
 import '../global/app_styles.dart';
 
-// ── Barre de recherche témoin ──────────────────────────────────────────────────
+// ── Dropdown témoin ───────────────────────────────────────────────────────────
 
-class TemoinSearchBar extends StatefulWidget {
-  final List<Map<String, dynamic>> results;
-  final void Function(String query)           onSearch;
-  final void Function(Map<String, dynamic> t) onSelected;
+class TemoinDropdown extends StatelessWidget {
+  final List<Map<String, dynamic>>            temoins;
+  final Map<String, dynamic>?                 selected;
+  final void Function(Map<String, dynamic>?)  onChanged;
 
-  const TemoinSearchBar({
+  const TemoinDropdown({
     super.key,
-    required this.results,
-    required this.onSearch,
-    required this.onSelected,
+    required this.temoins,
+    required this.selected,
+    required this.onChanged,
   });
-
-  @override
-  State<TemoinSearchBar> createState() => _TemoinSearchBarState();
-}
-
-class _TemoinSearchBarState extends State<TemoinSearchBar> {
-  final _ctrl = TextEditingController();
-
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -35,48 +25,32 @@ class _TemoinSearchBarState extends State<TemoinSearchBar> {
       children: [
         Text('Témoin *', style: AppTextStyles.label),
         const SizedBox(height: 6),
-        TextField(
-          controller: _ctrl,
-          style:      AppTextStyles.input,
-          onChanged:  widget.onSearch,
-          decoration: AppInputDecoration.of(
-            'Rechercher le témoin',
-            hint: 'Nom ou prénom…',
-          ),
-        ),
-        if (widget.results.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Container(
-            decoration: BoxDecoration(
-              color:        AppColors.inputFill,
-              borderRadius: BorderRadius.circular(10),
-              border:       Border.all(color: const Color(0xFF333333)),
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics:    const NeverScrollableScrollPhysics(),
-              itemCount:  widget.results.length,
-              separatorBuilder: (_, __) =>
-                  const Divider(height: 1, color: Color(0xFF333333)),
-              itemBuilder: (_, i) {
-                final t = widget.results[i];
-                return ListTile(
-                  dense:   true,
-                  leading: const Icon(Icons.person_outline,
-                      color: AppColors.textMuted, size: 18),
-                  title: Text(
+        DropdownButtonFormField<Map<String, dynamic>>(
+          value:         selected,
+          hint:          Text('Sélectionner un témoin…',
+                             style: AppTextStyles.label),
+          style:         AppTextStyles.input,
+          dropdownColor: AppColors.inputFill,
+          decoration:    AppInputDecoration.of(''),
+          isExpanded:    true,
+          items: temoins.map((t) => DropdownMenuItem<Map<String, dynamic>>(
+            value: t,
+            child: Row(
+              children: [
+                const Icon(Icons.person_outline,
+                    size: 15, color: AppColors.textMuted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
                     '${t['prenom']} ${t['nom']}',
-                    style: AppTextStyles.input,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  onTap: () {
-                    _ctrl.text = '${t['prenom']} ${t['nom']}';
-                    widget.onSelected(t);
-                  },
-                );
-              },
+                ),
+              ],
             ),
-          ),
-        ],
+          )).toList(),
+          onChanged: onChanged,
+        ),
       ],
     );
   }

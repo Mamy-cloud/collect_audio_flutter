@@ -1,0 +1,92 @@
+workflows:
+
+  android-release:
+    name: Android Release
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - keystore_credentials  # Variables d'environnement dans Codemagic
+
+    scripts:
+      # ── 1. Utilise le pubspec Android ─────────────────────────────────────
+      - name: Copier pubspec Android
+        script: |
+          cp pubspec_android.yaml pubspec.yaml
+
+      # ── 2. Dépendances ────────────────────────────────────────────────────
+      - name: Flutter pub get
+        script: |
+          flutter pub get
+
+      # ── 3. Analyse ────────────────────────────────────────────────────────
+      - name: Flutter analyze
+        script: |
+          flutter analyze --no-fatal-infos
+
+      # ── 4. Build APK debug (pour test rapide) ─────────────────────────────
+      - name: Build APK debug
+        script: |
+          flutter build apk --debug \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
+
+      # ── 5. Build APK release (signé) ──────────────────────────────────────
+      - name: Build APK release
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
+          flutter build apk --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER \
+            --dart-define=ENV=production
+        environment:
+          CM_KEYSTORE:          $CM_KEYSTORE          # base64 du .jks
+          CM_KEY_ALIAS:         $CM_KEY_ALIAS
+          CM_KEY_PASSWORD:      $CM_KEY_PASSWORD
+          CM_KEYSTORE_PASSWORD: $CM_KEYSTORE_PASSWORD
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
+      - build/app/outputs/flutter-apk/app-release.apk
+
+    publishing:
+      email:
+        recipients:
+          - ton@email.com
+        notify:
+          success: true
+          failure: true
+
+  # ── Build Android debug uniquement (sans signature) ───────────────────────
+
+  android-debug:
+    name: Android Debug (test rapide)
+    max_build_duration: 30
+    environment:
+      flutter: stable
+      java: 17
+
+    scripts:
+      - name: Copier pubspec Android
+        script: cp pubspec_android.yaml pubspec.yaml
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Build APK debug
+        script: |
+          flutter build apk --debug \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
+
+    publishing:
+      email:
+        recipients:
+          - ton@email.com
+        notify:
+          success: true
+          failure: false
