@@ -15,9 +15,6 @@ workflows:
         CM_KEYSTORE_PASSWORD: $CM_KEYSTORE_PASSWORD
 
     scripts:
-      - name: Copier pubspec Android
-        script: cp pubspec.yaml
-
       - name: Flutter pub get
         script: flutter pub get
 
