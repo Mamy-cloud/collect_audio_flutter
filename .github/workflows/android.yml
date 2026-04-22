@@ -38,9 +38,8 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Supprimer GeneratedPluginRegistrant v1
-        run: |
-          rm -f android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+      - name: Vérifier version record
+        run: flutter pub deps | grep record
 
       - name: Flutter analyze
         run: flutter analyze lib/ --no-fatal-infos
