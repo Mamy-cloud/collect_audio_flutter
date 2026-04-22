@@ -23,6 +23,7 @@ dependencies:
   http:               ^1.2.0
   connectivity_plus:  ^6.0.0
   shared_preferences: ^2.2.0
+  signature:          ^5.5.0
 
 # ── Force record_linux à une version compatible ───────────────────────────────
 dependency_overrides:

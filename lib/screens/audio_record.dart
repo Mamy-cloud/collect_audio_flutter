@@ -1,5 +1,6 @@
 // audio_record.dart — VERSION ANDROID/iOS
 // Utilise le package 'record' pour l'enregistrement avec choix du micro
+// Sauvegarde la durée d'enregistrement en secondes
 
 import 'dart:async';
 import 'dart:io';
@@ -11,7 +12,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../widgets/global/app_styles.dart';
 
 class AudioRecordSheet extends StatefulWidget {
-  final void Function(String audioPath) onSave;
+  // onSave retourne le chemin ET la durée en secondes
+  final void Function(String audioPath, int dureeSecondes) onSave;
   const AudioRecordSheet({super.key, required this.onSave});
 
   @override
@@ -25,7 +27,6 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
   String?              _finalPath;
   final AudioRecorder  _recorder     = AudioRecorder();
 
-  // ── Appareils audio ────────────────────────────────────────────────────────
   List<InputDevice> _devices        = [];
   InputDevice?      _selectedDevice;
   bool              _loadingDevices = true;
@@ -57,8 +58,6 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
     return p.join(dir.path,
         'temoignage_${DateTime.now().millisecondsSinceEpoch}.m4a');
   }
-
-  // ─── Actions ───────────────────────────────────────────────────────────────
 
   Future<void> _startRecording() async {
     _elapsed   = Duration.zero;
@@ -100,7 +99,8 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
 
   void _saveTestimony() {
     if (_finalPath != null) {
-      widget.onSave(_finalPath!);
+      // Envoie chemin + durée en secondes
+      widget.onSave(_finalPath!, _elapsed.inSeconds);
       Navigator.of(context).pop();
     }
   }
@@ -118,8 +118,10 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
   }
 
   String get _elapsedLabel {
+    final h = _elapsed.inHours;
     final m = _elapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = _elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (h > 0) return '$h:$m:$s';
     return '$m:$s';
   }
 
@@ -156,10 +158,7 @@ class _AudioRecordSheetState extends State<AudioRecordSheet> {
                   color: AppColors.textPrimary)),
 
           const SizedBox(height: 20),
-
-          // ── Sélecteur de micro ─────────────────────────────────────────
           _buildDeviceSelector(),
-
           const SizedBox(height: 24),
 
           _Magnetophone(status: _status, elapsedLabel: _elapsedLabel),
@@ -335,7 +334,7 @@ class _Magnetophone extends StatelessWidget {
                 fontSize:     36,
                 fontWeight:   FontWeight.w300,
                 color:        AppColors.textPrimary,
-                fontFeatures: [FontFeature.tabularFigures()],
+                fontFeatures: const [FontFeature.tabularFigures()],
               )),
           const SizedBox(height: 8),
           Text(_statusLabel(status),

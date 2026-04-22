@@ -16,6 +16,9 @@ class SaveQuestionnaire {
     required List<String> themes,
     String?               sujetDuJour,
     String?               urlAudio,
+    int                   dureeAudio   = 0,
+    String?               signatureUrl,
+    bool                  accepteRgpd  = false,
   }) async {
     final db = CreateTableTemoin.db;
     final id = _uuid.v4();
@@ -37,6 +40,11 @@ class SaveQuestionnaire {
         'user_id':       userId,
         'questionnaire': jsonEncode(questionnaire),
         'url_audio':     urlAudio,
+      'duree_audio':   dureeAudio,
+      'signature_url': signatureUrl,
+      'accepte_rgpd':  accepteRgpd ? 1 : 0,
+      'signature_url': signatureUrl,
+      'accepte_rgpd':  accepteRgpd ? 1 : 0,
         'created_at':    DateTime.now().toIso8601String(),
       },
     );

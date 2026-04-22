@@ -8,6 +8,22 @@ import '../../database/update_delete/delete_collect_questionnaire.dart';
 import '../../screens/formulaire_creer_temoin_screen.dart';
 import '../../screens/display_info_collect_screen.dart';
 
+// ── Helper durée ──────────────────────────────────────────────────────────────
+
+String _formatDuree(dynamic secondes) {
+  if (secondes == null) return '';
+  final total = secondes as int;
+  if (total <= 0) return '';
+  final h = total ~/ 3600;
+  final m = (total % 3600) ~/ 60;
+  final s = total % 60;
+  if (h > 0) {
+    return '${h}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s';
+  }
+  if (m > 0) return '${m}m ${s.toString().padLeft(2, '0')}s';
+  return '${s}s';
+}
+
 class EnregistrementEmptyState extends StatelessWidget {
   const EnregistrementEmptyState({super.key});
   @override
@@ -449,9 +465,12 @@ class CollecteCard extends StatelessWidget {
     final themes  = _val(q, 'themes');
     final sujet   = _val(q, 'sujet_du_jour');
     final accomp  = _val(q, 'accompagnant');
-    final contact = _val(q, 'contact');   // ← contact du questionnaire
+    final contact = _val(q, 'contact');
     final date    = (collecte['created_at'] as String? ?? '').split('T').first;
-    final audio   = collecte['url_audio'] as String?;
+    final audio        = collecte['url_audio'] as String?;
+    final duree        = _formatDuree(collecte['duree_audio']);
+    final signatureUrl = collecte['signature_url'] as String?;
+    final accepteRgpd  = (collecte['accepte_rgpd'] as int? ?? 0) == 1;
 
     return GestureDetector(
       onTap: () => showModalBottomSheet(
@@ -558,7 +577,133 @@ class CollecteCard extends StatelessWidget {
                                   .copyWith(fontSize: 11),
                               overflow: TextOverflow.ellipsis),
                         ),
+                        if (duree.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.timer_outlined,
+                              size: 13, color: AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(duree,
+                              style: AppTextStyles.label
+                                  .copyWith(fontSize: 11)),
+                        ],
                       ],
+                    ),
+                  ],
+
+                  // ── RGPD ────────────────────────────────────────────────
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        accepteRgpd
+                            ? Icons.shield_outlined
+                            : Icons.shield_moon_outlined,
+                        size:  13,
+                        color: accepteRgpd
+                            ? const Color(0xFF4CAF50)
+                            : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        accepteRgpd
+                            ? 'Témoin a accepté le RGPD'
+                            : 'RGPD non accepté',
+                        style: AppTextStyles.label.copyWith(
+                          fontSize: 11,
+                          color: accepteRgpd
+                              ? const Color(0xFF4CAF50)
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // ── Signature ────────────────────────────────────────────
+                  if (signatureUrl != null &&
+                      File(signatureUrl).existsSync()) ...[
+                    const SizedBox(height: 10),
+                    const Divider(height: 1, color: Color(0xFF2A2A2A)),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.draw_outlined,
+                            size: 13, color: AppColors.textMuted),
+                        const SizedBox(width: 6),
+                        Text('Signature',
+                            style: AppTextStyles.label
+                                .copyWith(fontSize: 11)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color:        AppColors.inputFill,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: const Color(0xFF333333)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(signatureUrl),
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // ── RGPD ────────────────────────────────────────────────
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        accepteRgpd
+                            ? Icons.verified_user_outlined
+                            : Icons.shield_outlined,
+                        size:  13,
+                        color: accepteRgpd
+                            ? const Color(0xFF4CAF50)
+                            : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        accepteRgpd
+                            ? 'Témoin a accepté les données RGPD'
+                            : 'RGPD non accepté',
+                        style: AppTextStyles.label.copyWith(
+                          fontSize: 11,
+                          color: accepteRgpd
+                              ? const Color(0xFF4CAF50)
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // ── Signature ────────────────────────────────────────────
+                  if (signatureUrl != null &&
+                      File(signatureUrl).existsSync()) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.draw_outlined,
+                            size: 13, color: AppColors.textMuted),
+                        const SizedBox(width: 6),
+                        Text('Signature enregistrée',
+                            style: AppTextStyles.label
+                                .copyWith(fontSize: 11)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(signatureUrl),
+                        height: 60,
+                        width:  double.infinity,
+                        fit:    BoxFit.contain,
+                      ),
                     ),
                   ],
                 ],

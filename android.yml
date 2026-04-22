@@ -45,12 +45,15 @@ jobs:
         run: |
           flutter build apk --release \
             --split-per-abi \
-            --no-shrink \
+            --build-name=1.0.${{ github.run_number }} \
             --build-number=${{ github.run_number }}
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          BUILD_NAME:   "1.0.${{ github.run_number }}"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-arm64-${{ github.run_number }}
+          name: app-arm64-v${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-          retention-days: 7
+          retention-days: 30

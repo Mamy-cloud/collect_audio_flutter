@@ -1,6 +1,6 @@
 // create_table_temoin.dart
 // Android/iOS → sqflite natif
-// Version 6. — ajout user_id dans info_perso_temoin
+// Version 6 — ajout user_id dans info_perso_temoin
 
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -19,7 +19,7 @@ class CreateTableTemoin {
 
     _db = await openDatabase(
       path,
-      version: 6,
+      version: 8,
       onCreate: (db, version) async {
         await _createInfoPersoTemoin(db);
         await _createLoginUser(db);
@@ -48,6 +48,27 @@ class CreateTableTemoin {
         if (oldVersion < 6) {
           await db.execute(
             "ALTER TABLE info_perso_temoin ADD COLUMN user_id TEXT",
+          );
+        }
+        if (oldVersion < 7) {
+          await db.execute(
+            "ALTER TABLE collect_info_from_temoin ADD COLUMN duree_audio INTEGER NOT NULL DEFAULT 0",
+          );
+        }
+        if (oldVersion < 8) {
+          await db.execute(
+            "ALTER TABLE collect_info_from_temoin ADD COLUMN signature_url TEXT",
+          );
+          await db.execute(
+            "ALTER TABLE collect_info_from_temoin ADD COLUMN accepte_rgpd INTEGER NOT NULL DEFAULT 0",
+          );
+        }
+        if (oldVersion < 8) {
+          await db.execute(
+            "ALTER TABLE collect_info_from_temoin ADD COLUMN signature_url TEXT",
+          );
+          await db.execute(
+            "ALTER TABLE collect_info_from_temoin ADD COLUMN accepte_rgpd INTEGER NOT NULL DEFAULT 0",
           );
         }
       },
@@ -115,6 +136,9 @@ class CreateTableTemoin {
         user_id       TEXT NOT NULL,
         questionnaire TEXT NOT NULL DEFAULT '[]',
         url_audio     TEXT,
+        duree_audio   INTEGER NOT NULL DEFAULT 0,
+        signature_url TEXT,
+        accepte_rgpd  INTEGER NOT NULL DEFAULT 0,
         synced        INTEGER NOT NULL DEFAULT 0,
         created_at    TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES login_user(id)
