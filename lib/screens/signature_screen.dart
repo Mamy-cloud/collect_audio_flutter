@@ -1,5 +1,5 @@
 // signature_screen.dart
-// Écran de signature manuscrite — stocké en image PNG
+// Écran de signature manuscrite — stocké en image PNG.
 
 import 'dart:io';
 import 'dart:typed_data';
