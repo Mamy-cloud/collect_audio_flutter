@@ -43,8 +43,6 @@ class SaveQuestionnaire {
       'duree_audio':   dureeAudio,
       'signature_url': signatureUrl,
       'accepte_rgpd':  accepteRgpd ? 1 : 0,
-      'signature_url': signatureUrl,
-      'accepte_rgpd':  accepteRgpd ? 1 : 0,
         'created_at':    DateTime.now().toIso8601String(),
       },
     );
